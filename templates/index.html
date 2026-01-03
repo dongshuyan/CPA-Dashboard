@@ -775,6 +775,18 @@
         .quota-value.medium { color: #fbbf24; }
         .quota-value.low { color: #f87171; }
 
+        .reset-time {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.7rem;
+            min-width: 65px;
+        }
+
+        .reset-time.soon { color: #34d399; }
+        .reset-time.waiting { color: #fbbf24; }
+        .reset-time.long { color: var(--text-muted); }
+
         .no-quota {
             color: var(--text-muted);
             font-size: 0.8rem;
@@ -1438,10 +1450,16 @@
             const modelsHtml = quota.models.map(model => {
                 const level = model.percentage >= 70 ? 'high' : model.percentage >= 30 ? 'medium' : 'low';
                 const shortName = model.name.replace('models/', '').split('/').pop();
+                const resetInfo = formatTimeRemaining(model.reset_time);
+                
+                const resetHtml = resetInfo 
+                    ? `<span class="reset-time ${resetInfo.class}" title="重置时间: ${new Date(model.reset_time).toLocaleString()}">⏱️ ${resetInfo.text}</span>`
+                    : `<span class="reset-time long">-</span>`;
                 
                 return `
                     <div class="quota-model">
                         <span class="model-name" title="${model.name}">${shortName}</span>
+                        ${resetHtml}
                         <div class="quota-bar-container">
                             <div class="quota-bar ${level}" style="width: ${model.percentage}%"></div>
                         </div>
@@ -1605,6 +1623,40 @@
         }
 
         // ==================== Utilities ====================
+        function formatTimeRemaining(dateStr) {
+            if (!dateStr) return null;
+            
+            const targetDate = new Date(dateStr);
+            const now = new Date();
+            const diffMs = targetDate.getTime() - now.getTime();
+            
+            if (diffMs <= 0) return { text: '0h 0m', class: 'soon' };
+            
+            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            let text;
+            if (diffHrs >= 24) {
+                const diffDays = Math.floor(diffHrs / 24);
+                const remainingHrs = diffHrs % 24;
+                text = `${diffDays}d ${remainingHrs}h`;
+            } else {
+                text = `${diffHrs}h ${diffMins}m`;
+            }
+            
+            // 颜色等级
+            let colorClass;
+            if (diffHrs < 1) {
+                colorClass = 'soon';      // 绿色 - 快重置了
+            } else if (diffHrs < 6) {
+                colorClass = 'waiting';   // 琥珀色 - 等待中
+            } else {
+                colorClass = 'long';      // 灰色 - 长等待
+            }
+            
+            return { text, class: colorClass };
+        }
+
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;

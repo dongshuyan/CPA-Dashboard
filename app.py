@@ -34,11 +34,35 @@ from quota_service import get_quota_for_account, refresh_access_token, fetch_pro
 
 app = Flask(__name__)
 
-# 内存缓存配额数据
-quota_cache = {}
+# 配额缓存文件路径
+QUOTA_CACHE_FILE = Path(__file__).parent / "quota_cache.json"
 
 # 禁用代理
 NO_PROXY = {"http": None, "https": None}
+
+
+def load_quota_cache() -> dict:
+    """从文件加载配额缓存"""
+    if QUOTA_CACHE_FILE.exists():
+        try:
+            with open(QUOTA_CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"加载配额缓存失败: {e}")
+    return {}
+
+
+def save_quota_cache(cache: dict):
+    """保存配额缓存到文件"""
+    try:
+        with open(QUOTA_CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"保存配额缓存失败: {e}")
+
+
+# 内存缓存配额数据（启动时从文件加载）
+quota_cache = load_quota_cache()
 
 
 def get_management_headers():
@@ -263,6 +287,7 @@ def api_refresh_account_quota(account_id: str):
         "subscription_tier": quota.get("subscription_tier"),
         "fetched_at": time.time()
     }
+    save_quota_cache(quota_cache)
     
     return jsonify({
         "account_id": account_id,
@@ -336,6 +361,9 @@ def api_refresh_all_quotas():
                 "status": "error",
                 "message": str(e)
             })
+    
+    # 批量刷新完成后保存缓存
+    save_quota_cache(quota_cache)
     
     return jsonify({
         "total": len(auth_files),
