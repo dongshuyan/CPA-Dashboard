@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIProxyAPI 控制面板</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-hover: #242430;
+            --bg-input: #0f0f16;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9090a8;
+            --text-muted: #606078;
+            --accent-cyan: #00d4ff;
+            --accent-blue: #4f8cff;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --border-color: #2a2a3a;
+            --border-focus: #4f8cff;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --glow-cyan: 0 0 20px rgba(0, 212, 255, 0.3);
+            --glow-green: 0 0 20px rgba(16, 185, 129, 0.3);
+            --glow-red: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(ellipse at top, rgba(79, 140, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: var(--glow-cyan);
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.35rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-tab {
+            padding: 0.6rem 1.25rem;
+            background: transparent;
+            border: none;
+            border-radius: 7px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .nav-tab.active {
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 2px 10px rgba(79, 140, 255, 0.3);
+        }
+
+        .nav-tab .icon {
+            font-size: 1rem;
+        }
+
+        /* Page Content */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #6366f1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(79, 140, 255, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #059669);
+            color: white;
+        }
+
+        .btn-success:hover {
+            box-shadow: var(--glow-green);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--accent-red), #dc2626);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            box-shadow: var(--glow-red);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-lg {
+            padding: 0.85rem 1.75rem;
+            font-size: 0.95rem;
+        }
+
+        /* Service Control Page */
+        .service-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .service-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-title .icon {
+            font-size: 1.1rem;
+        }
+
+        .panel-body {
+            padding: 1.25rem;
+        }
+
+        /* Status Display */
+        .status-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-input);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .status-indicator.running {
+            background: rgba(16, 185, 129, 0.15);
+            box-shadow: var(--glow-green);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.stopped {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-info h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .status-info h3.running { color: var(--accent-green); }
+        .status-info h3.stopped { color: var(--accent-red); }
+
+        .status-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-meta {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .status-meta-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-meta-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-meta-item .label {
+            color: var(--text-muted);
+        }
+
+        .status-meta-item .value {
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Control Buttons */
+        .control-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Log Viewer */
+        .log-panel {
+            grid-column: 1 / -1;
+        }
+
+        .log-container {
+            background: var(--bg-input);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .log-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .log-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .log-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .log-toolbar-right {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .log-content {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-secondary);
+        }
+
+        .log-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-content::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .log-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .log-content::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Log highlighting */
+        .log-line { padding: 1px 0; }
+        .log-error { color: #f87171; }
+        .log-warn { color: #fbbf24; }
+        .log-info { color: #60a5fa; }
+        .log-success { color: #4ade80; }
+        .log-time { color: var(--text-muted); }
+
+        /* Auto refresh toggle */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            background: var(--bg-primary);
+            border-radius: 11px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .toggle.active {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+        }
+
+        .toggle.active::after {
+            left: 20px;
+        }
+
+        .toggle-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* ================ Accounts Page Styles ================ */
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .progress-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .progress-info.active {
+            color: var(--accent-cyan);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 1.1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card h3 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.45rem 0.9rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .filter-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .filter-btn .count {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            margin-left: 0.4rem;
+        }
+
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1rem;
+        }
+
+        .account-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .account-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow);
+        }
+
+        .account-card.refreshing {
+            opacity: 0.7;
+        }
+
+        .account-card.refreshed {
+            animation: cardFlash 0.5s ease;
+        }
+
+        @keyframes cardFlash {
+            0% { border-color: var(--accent-green); box-shadow: var(--glow-green); }
+            100% { border-color: var(--border-color); box-shadow: none; }
+        }
+
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .account-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .account-email {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .account-type {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .provider-badge {
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .provider-antigravity { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .provider-gemini { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .provider-claude { background: rgba(249, 115, 22, 0.2); color: #fb923c; }
+        .provider-codex { background: rgba(79, 140, 255, 0.2); color: #93c5fd; }
+        .provider-qwen { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .provider-iflow { background: rgba(20, 184, 166, 0.2); color: #5eead4; }
+        .provider-vertex { background: rgba(251, 191, 36, 0.2); color: #fcd34d; }
+
+        .tier-badge {
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .tier-ultra {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+        }
+
+        .tier-pro {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .tier-free {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+        }
+
+        .tier-unknown {
+            background: var(--bg-hover);
+            color: var(--text-muted);
+        }
+
+        .quota-section {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .quota-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+        }
+
+        .quota-header h4 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .refresh-btn {
+            padding: 0.35rem 0.7rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-family: inherit;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .refresh-btn.loading {
+            pointer-events: none;
+        }
+
+        .refresh-btn.loading .icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .quota-models {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .quota-model {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .model-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 130px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .quota-bar-container {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .quota-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .quota-bar.high { background: linear-gradient(90deg, #10b981, #34d399); }
+        .quota-bar.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .quota-bar.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        .quota-value {
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .quota-value.high { color: #34d399; }
+        .quota-value.medium { color: #fbbf24; }
+        .quota-value.low { color: #f87171; }
+
+        .no-quota {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+        }
+
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-disabled { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        .token-status {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            margin-left: 0.4rem;
+        }
+        .token-refreshed { background: rgba(251, 191, 36, 0.2); color: #fcd34d; }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.9rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .toast.success { border-color: var(--accent-green); }
+        .toast.error { border-color: var(--accent-red); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .accounts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .log-content {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">
+                    <h1>CLIProxyAPI</h1>
+                    <p>Control Panel</p>
+                </div>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-page="service">
+                    <span class="icon">🖥️</span>
+                    服务控制
+                </button>
+                <button class="nav-tab" data-page="accounts">
+                    <span class="icon">👤</span>
+                    账户管理
+                </button>
+            </nav>
+        </header>
+
+        <!-- Service Control Page -->
+        <div class="page active" id="page-service">
+            <div class="service-grid">
+                <!-- Status Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">📊</span>
+                            服务状态
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="refreshStatus()">
+                            <span>🔄</span> 刷新
+                        </button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="status-display">
+                            <div class="status-indicator stopped" id="statusIndicator">
+                                <span id="statusIcon">⏹️</span>
+                            </div>
+                            <div class="status-info">
+                                <h3 class="stopped" id="statusText">检查中...</h3>
+                                <p id="statusSubtext">正在获取服务状态</p>
+                            </div>
+                        </div>
+                        <div class="status-meta" id="statusMeta">
+                            <div class="status-meta-item">
+                                <span class="label">进程 PID</span>
+                                <span class="value" id="metaPid">-</span>
+                            </div>
+                            <div class="status-meta-item">
+                                <span class="label">服务目录</span>
+                                <span class="value" id="metaDir">-</span>
+                            </div>
+                            <div class="status-meta-item">
+                                <span class="label">日志文件</span>
+                                <span class="value" id="metaLog">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🎛️</span>
+                            服务控制
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+                            通过下方按钮控制 CLIProxyAPI 服务的运行状态
+                        </p>
+                        <div class="control-buttons">
+                            <button class="btn btn-success btn-lg" id="btnStart" onclick="startService()">
+                                <span>▶️</span> 启动服务
+                            </button>
+                            <button class="btn btn-danger btn-lg" id="btnStop" onclick="stopService()">
+                                <span>⏹️</span> 停止服务
+                            </button>
+                            <button class="btn btn-secondary btn-lg" id="btnRestart" onclick="restartService()">
+                                <span>🔄</span> 重启服务
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Panel -->
+                <div class="panel log-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">📜</span>
+                            运行日志
+                        </div>
+                        <div class="log-toolbar-right">
+                            <div class="toggle-wrapper">
+                                <span class="toggle-label">自动刷新</span>
+                                <div class="toggle" id="autoRefreshToggle" onclick="toggleAutoRefresh()"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="log-container">
+                        <div class="log-toolbar">
+                            <div class="log-toolbar-left">
+                                <span class="log-meta" id="logMeta">日志大小: - | 行数: -</span>
+                            </div>
+                            <div class="log-toolbar-right">
+                                <button class="btn btn-ghost btn-sm" onclick="refreshLogs()">
+                                    <span>🔄</span> 刷新
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="scrollLogToBottom()">
+                                    <span>⬇️</span> 底部
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="clearLogs()">
+                                    <span>🗑️</span> 清除日志
+                                </button>
+                            </div>
+                        </div>
+                        <div class="log-content" id="logContent">
+                            正在加载日志...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts Page -->
+        <div class="page" id="page-accounts">
+            <div class="actions" style="margin-bottom: 1.25rem; justify-content: flex-end;">
+                <span class="progress-info" id="progressInfo"></span>
+                <button class="btn btn-secondary" onclick="loadAccounts()">
+                    <span>🔄</span> 刷新列表
+                </button>
+                <button class="btn btn-primary" id="refreshAllBtn" onclick="refreshAllQuotas()">
+                    <span>📊</span> 刷新所有配额
+                </button>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <h3>总账户数</h3>
+                    <div class="value" id="totalCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Antigravity</h3>
+                    <div class="value" id="antigravityCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>ULTRA 会员</h3>
+                    <div class="value" id="ultraCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>PRO 会员</h3>
+                    <div class="value" id="proCount">-</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">
+                    全部 <span class="count" id="filterAllCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="antigravity">
+                    Antigravity <span class="count" id="filterAntigravityCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="gemini">
+                    Gemini <span class="count" id="filterGeminiCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="claude">
+                    Claude <span class="count" id="filterClaudeCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="codex">
+                    Codex <span class="count" id="filterCodexCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="ultra">
+                    ULTRA <span class="count" id="filterUltraCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="pro">
+                    PRO <span class="count" id="filterProCount">0</span>
+                </button>
+            </div>
+
+            <div class="accounts-grid" id="accountsGrid">
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <p>正在加载账户...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Global State ====================
+        let accounts = [];
+        let currentFilter = 'all';
+        let autoRefreshEnabled = false;
+        let autoRefreshInterval = null;
+        const CONCURRENCY = 4;
+
+        // ==================== Navigation ====================
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const pageId = `page-${tab.dataset.page}`;
+                document.getElementById(pageId).classList.add('active');
+
+                // Load data for the page
+                if (tab.dataset.page === 'service') {
+                    refreshStatus();
+                    refreshLogs();
+                } else if (tab.dataset.page === 'accounts') {
+                    if (accounts.length === 0) {
+                        loadAccounts();
+                    }
+                }
+            });
+        });
+
+        // ==================== Service Control ====================
+        async function refreshStatus() {
+            try {
+                const resp = await fetch('/api/service/status');
+                const data = await resp.json();
+                updateStatusUI(data);
+            } catch (error) {
+                console.error('获取状态失败:', error);
+                showToast('获取服务状态失败', 'error');
+            }
+        }
+
+        function updateStatusUI(data) {
+            const indicator = document.getElementById('statusIndicator');
+            const icon = document.getElementById('statusIcon');
+            const text = document.getElementById('statusText');
+            const subtext = document.getElementById('statusSubtext');
+            const btnStart = document.getElementById('btnStart');
+            const btnStop = document.getElementById('btnStop');
+
+            if (data.running) {
+                indicator.className = 'status-indicator running';
+                icon.textContent = '✅';
+                text.className = 'running';
+                text.textContent = '服务运行中';
+                subtext.textContent = `${data.count} 个进程正在运行`;
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+            } else {
+                indicator.className = 'status-indicator stopped';
+                icon.textContent = '⏹️';
+                text.className = 'stopped';
+                text.textContent = '服务已停止';
+                subtext.textContent = data.configured ? '服务未运行' : '服务目录未配置';
+                btnStart.disabled = !data.configured;
+                btnStop.disabled = true;
+            }
+
+            // Update meta info
+            document.getElementById('metaPid').textContent = data.pids?.join(', ') || '-';
+            document.getElementById('metaDir').textContent = data.service_dir || '-';
+            document.getElementById('metaLog').textContent = data.log_file || '-';
+        }
+
+        async function startService() {
+            const btn = document.getElementById('btnStart');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 启动中...';
+
+            try {
+                const resp = await fetch('/api/service/start', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('服务启动成功', 'success');
+                } else {
+                    showToast(data.message || data.error || '启动失败', 'error');
+                }
+            } catch (error) {
+                showToast('启动服务失败: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = '<span>▶️</span> 启动服务';
+                refreshStatus();
+            }
+        }
+
+        async function stopService() {
+            const btn = document.getElementById('btnStop');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 停止中...';
+
+            try {
+                const resp = await fetch('/api/service/stop', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('服务已停止', 'success');
+                } else {
+                    showToast(data.message || data.error || '停止失败', 'error');
+                }
+            } catch (error) {
+                showToast('停止服务失败: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = '<span>⏹️</span> 停止服务';
+                refreshStatus();
+            }
+        }
+
+        async function restartService() {
+            const btn = document.getElementById('btnRestart');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 重启中...';
+
+            try {
+                const resp = await fetch('/api/service/restart', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('服务重启成功', 'success');
+                } else {
+                    showToast('重启失败', 'error');
+                }
+            } catch (error) {
+                showToast('重启服务失败: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔄</span> 重启服务';
+                refreshStatus();
+            }
+        }
+
+        // ==================== Log Viewer ====================
+        async function refreshLogs() {
+            try {
+                const resp = await fetch('/api/logs?lines=500');
+                const data = await resp.json();
+
+                if (data.error) {
+                    document.getElementById('logContent').textContent = `错误: ${data.error}`;
+                    return;
+                }
+
+                if (!data.exists) {
+                    document.getElementById('logContent').textContent = '日志文件不存在';
+                    document.getElementById('logMeta').textContent = '日志文件不存在';
+                    return;
+                }
+
+                const logContent = document.getElementById('logContent');
+                logContent.innerHTML = highlightLog(data.content || '(空日志)');
+                
+                document.getElementById('logMeta').textContent = 
+                    `日志大小: ${data.size_human || '-'} | 总行数: ${data.total_lines || 0}`;
+
+                // Auto scroll to bottom if near bottom
+                if (logContent.scrollHeight - logContent.scrollTop < logContent.clientHeight + 100) {
+                    scrollLogToBottom();
+                }
+            } catch (error) {
+                document.getElementById('logContent').textContent = `加载日志失败: ${error.message}`;
+            }
+        }
+
+        function highlightLog(content) {
+            if (!content) return '';
+            
+            return content.split('\n').map(line => {
+                let className = 'log-line';
+                
+                // Highlight by log level
+                if (/\berror\b/i.test(line) || /\bfatal\b/i.test(line) || /\bpanic\b/i.test(line)) {
+                    className += ' log-error';
+                } else if (/\bwarn(ing)?\b/i.test(line)) {
+                    className += ' log-warn';
+                } else if (/\binfo\b/i.test(line)) {
+                    className += ' log-info';
+                } else if (/\bsuccess\b/i.test(line) || /\bstarted\b/i.test(line)) {
+                    className += ' log-success';
+                }
+
+                // Escape HTML
+                const escaped = line
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                return `<div class="${className}">${escaped}</div>`;
+            }).join('');
+        }
+
+        function scrollLogToBottom() {
+            const logContent = document.getElementById('logContent');
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        async function clearLogs() {
+            if (!confirm('确定要清除日志吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/logs/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backup: false })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('日志已清除', 'success');
+                    refreshLogs();
+                } else {
+                    showToast(data.error || '清除失败', 'error');
+                }
+            } catch (error) {
+                showToast('清除日志失败: ' + error.message, 'error');
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const toggle = document.getElementById('autoRefreshToggle');
+            autoRefreshEnabled = !autoRefreshEnabled;
+
+            if (autoRefreshEnabled) {
+                toggle.classList.add('active');
+                autoRefreshInterval = setInterval(() => {
+                    refreshLogs();
+                    refreshStatus();
+                }, 3000);
+            } else {
+                toggle.classList.remove('active');
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+
+        // ==================== Accounts ====================
+        async function loadAccounts() {
+            try {
+                const resp = await fetch('/api/accounts');
+                const data = await resp.json();
+                accounts = data.accounts || [];
+                updateStats();
+                renderAccounts();
+            } catch (error) {
+                console.error('加载账户失败:', error);
+                showToast('加载账户失败', 'error');
+            }
+        }
+
+        function updateStats() {
+            const total = accounts.length;
+            const antigravity = accounts.filter(a => a.type === 'antigravity').length;
+            const ultra = accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('ultra')).length;
+            const pro = accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('pro')).length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('antigravityCount').textContent = antigravity;
+            document.getElementById('ultraCount').textContent = ultra;
+            document.getElementById('proCount').textContent = pro;
+
+            document.getElementById('filterAllCount').textContent = total;
+            document.getElementById('filterAntigravityCount').textContent = antigravity;
+            document.getElementById('filterGeminiCount').textContent = accounts.filter(a => a.type === 'gemini').length;
+            document.getElementById('filterClaudeCount').textContent = accounts.filter(a => a.type === 'claude').length;
+            document.getElementById('filterCodexCount').textContent = accounts.filter(a => a.type === 'codex').length;
+            document.getElementById('filterUltraCount').textContent = ultra;
+            document.getElementById('filterProCount').textContent = pro;
+        }
+
+        function filterAccounts() {
+            if (currentFilter === 'all') return accounts;
+            if (currentFilter === 'ultra') {
+                return accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('ultra'));
+            }
+            if (currentFilter === 'pro') {
+                return accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('pro'));
+            }
+            return accounts.filter(a => a.type === currentFilter);
+        }
+
+        function renderAccounts() {
+            const grid = document.getElementById('accountsGrid');
+            const filtered = filterAccounts();
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>没有找到账户</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(account => renderAccountCard(account)).join('');
+        }
+
+        function renderAccountCard(account) {
+            const tierClass = getTierClass(account.subscription_tier);
+            const tierName = getTierName(account.subscription_tier);
+            const providerClass = `provider-${account.type}`;
+            const statusClass = account.disabled ? 'status-disabled' : 'status-active';
+            const statusText = account.disabled ? '已禁用' : '活跃';
+
+            return `
+                <div class="account-card" data-id="${account.id}" id="card-${account.id}">
+                    <div class="account-header">
+                        <div class="account-info">
+                            <div class="account-email">${account.email || account.name || '未知'}</div>
+                            <div class="account-type">
+                                <span class="provider-badge ${providerClass}">${account.type}</span>
+                                <span class="status-badge ${statusClass}">
+                                    <span class="status-dot"></span>
+                                    ${statusText}
+                                </span>
+                            </div>
+                        </div>
+                        ${tierName ? `<span class="tier-badge ${tierClass}">${tierName}</span>` : '<span class="tier-badge tier-unknown">-</span>'}
+                    </div>
+                    
+                    <div class="quota-section">
+                        <div class="quota-header">
+                            <h4>配额信息</h4>
+                            <button class="refresh-btn" onclick="refreshQuota('${account.id}', this)">
+                                <span class="icon">🔄</span>
+                                刷新
+                            </button>
+                        </div>
+                        <div class="quota-models" id="quota-${account.id}">
+                            ${renderQuota(account.quota)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuota(quota) {
+            if (!quota || !quota.models || quota.models.length === 0) {
+                if (quota && quota.token_status === 'refresh_failed') {
+                    return '<div class="no-quota" style="color: #f87171;">⚠️ Token 刷新失败</div>';
+                }
+                if (quota && quota.error) {
+                    return `<div class="no-quota" style="color: #f87171;">⚠️ ${quota.error}</div>`;
+                }
+                return '<div class="no-quota">点击刷新获取配额</div>';
+            }
+
+            if (quota.is_forbidden) {
+                return '<div class="no-quota" style="color: #f87171;">⚠️ 账户无权限 (403)</div>';
+            }
+
+            let tokenStatusHtml = '';
+            if (quota.token_status === 'refreshed') {
+                tokenStatusHtml = '<span class="token-status token-refreshed">🔄 Token 已刷新</span>';
+            }
+
+            const modelsHtml = quota.models.map(model => {
+                const level = model.percentage >= 70 ? 'high' : model.percentage >= 30 ? 'medium' : 'low';
+                const shortName = model.name.replace('models/', '').split('/').pop();
+                
+                return `
+                    <div class="quota-model">
+                        <span class="model-name" title="${model.name}">${shortName}</span>
+                        <div class="quota-bar-container">
+                            <div class="quota-bar ${level}" style="width: ${model.percentage}%"></div>
+                        </div>
+                        <span class="quota-value ${level}">${model.percentage}%</span>
+                    </div>
+                `;
+            }).join('');
+
+            return tokenStatusHtml + modelsHtml;
+        }
+
+        function getTierClass(tier) {
+            if (!tier) return 'tier-unknown';
+            const t = tier.toLowerCase();
+            if (t.includes('ultra')) return 'tier-ultra';
+            if (t.includes('pro')) return 'tier-pro';
+            return 'tier-free';
+        }
+
+        function getTierName(tier) {
+            if (!tier) return '';
+            const t = tier.toLowerCase();
+            if (t.includes('ultra')) return 'ULTRA';
+            if (t.includes('pro')) return 'PRO';
+            return tier.toUpperCase();
+        }
+
+        async function refreshQuota(accountId, btn) {
+            const card = document.getElementById(`card-${accountId}`);
+            if (btn) btn.classList.add('loading');
+            if (card) card.classList.add('refreshing');
+
+            try {
+                const resp = await fetch(`/api/accounts/${accountId}/quota`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    updateAccountUI(accountId, data);
+                } else {
+                    console.error('刷新失败:', data.error);
+                }
+            } catch (error) {
+                console.error('刷新配额失败:', error);
+            } finally {
+                if (btn) btn.classList.remove('loading');
+                if (card) {
+                    card.classList.remove('refreshing');
+                    card.classList.add('refreshed');
+                    setTimeout(() => card.classList.remove('refreshed'), 500);
+                }
+            }
+        }
+
+        function updateAccountUI(accountId, data) {
+            const account = accounts.find(a => a.id === accountId);
+            if (account) {
+                account.quota = data.quota;
+                account.subscription_tier = data.subscription_tier;
+            }
+
+            const quotaEl = document.getElementById(`quota-${accountId}`);
+            if (quotaEl) {
+                quotaEl.innerHTML = renderQuota(data.quota);
+            }
+
+            const card = document.querySelector(`.account-card[data-id="${accountId}"]`);
+            if (card && data.subscription_tier) {
+                const tierClass = getTierClass(data.subscription_tier);
+                const tierName = getTierName(data.subscription_tier);
+                const header = card.querySelector('.account-header');
+                let tierBadge = header.querySelector('.tier-badge');
+                
+                if (!tierBadge && tierName) {
+                    tierBadge = document.createElement('span');
+                    header.appendChild(tierBadge);
+                }
+                if (tierBadge) {
+                    tierBadge.className = `tier-badge ${tierClass}`;
+                    tierBadge.textContent = tierName || '-';
+                }
+            }
+
+            updateStats();
+        }
+
+        async function parallelLimit(tasks, limit) {
+            const results = [];
+            const executing = [];
+            
+            for (const task of tasks) {
+                const p = Promise.resolve().then(() => task());
+                results.push(p);
+                
+                if (limit <= tasks.length) {
+                    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+                    executing.push(e);
+                    if (executing.length >= limit) {
+                        await Promise.race(executing);
+                    }
+                }
+            }
+            
+            return Promise.all(results);
+        }
+
+        async function refreshAllQuotas() {
+            const btn = document.getElementById('refreshAllBtn');
+            const progressInfo = document.getElementById('progressInfo');
+            btn.disabled = true;
+            
+            const antigravityAccounts = accounts.filter(a => a.type === 'antigravity');
+            const total = antigravityAccounts.length;
+            let completed = 0;
+            let success = 0;
+            let failed = 0;
+
+            progressInfo.textContent = `0 / ${total}`;
+            progressInfo.classList.add('active');
+
+            const tasks = antigravityAccounts.map(account => async () => {
+                const card = document.getElementById(`card-${account.id}`);
+                if (card) card.classList.add('refreshing');
+
+                try {
+                    const resp = await fetch(`/api/accounts/${account.id}/quota`, { method: 'POST' });
+                    const data = await resp.json();
+
+                    if (resp.ok) {
+                        updateAccountUI(account.id, data);
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    console.error(`刷新 ${account.id} 失败:`, error);
+                    failed++;
+                } finally {
+                    completed++;
+                    progressInfo.textContent = `${completed} / ${total}`;
+                    
+                    if (card) {
+                        card.classList.remove('refreshing');
+                        card.classList.add('refreshed');
+                        setTimeout(() => card.classList.remove('refreshed'), 500);
+                    }
+                }
+            });
+
+            await parallelLimit(tasks, CONCURRENCY);
+
+            btn.disabled = false;
+            progressInfo.classList.remove('active');
+            
+            const skipped = accounts.length - total;
+            let message = `刷新完成: ${success} 成功`;
+            if (failed > 0) message += `, ${failed} 失败`;
+            if (skipped > 0) message += `, ${skipped} 跳过`;
+            
+            showToast(message, failed > 0 ? 'error' : 'success');
+            progressInfo.textContent = '';
+        }
+
+        // ==================== Utilities ====================
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderAccounts();
+            });
+        });
+
+        // ==================== Initial Load ====================
+        refreshStatus();
+        refreshLogs();
+    </script>
+</body>
+</html>
