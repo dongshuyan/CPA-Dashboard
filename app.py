@@ -28,7 +28,10 @@ from config import (
     WEBUI_DEBUG,
     CPA_SERVICE_DIR,
     CPA_BINARY_NAME,
-    CPA_LOG_FILE
+    CPA_LOG_FILE,
+    API_KEYS,
+    API_PORT,
+    API_HOST
 )
 from quota_service import get_quota_for_account, refresh_access_token, fetch_project_and_tier
 
@@ -675,6 +678,112 @@ def format_file_size(size_bytes):
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024
     return f"{size_bytes:.1f} TB"
+
+
+# ==================== API 使用说明 ====================
+
+@app.route("/api/usage-guide")
+def api_usage_guide():
+    """获取 API 使用说明，包含示例代码"""
+    # 获取第一个可用的 API key
+    api_key = API_KEYS[0] if API_KEYS else "YOUR_API_KEY"
+    base_url = f"http://{API_HOST}:{API_PORT}"
+    
+    # 生成 curl 示例
+    curl_example = f'''curl {base_url}/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer {api_key}" \\
+  -d '{{
+    "model": "gemini-2.5-flash",
+    "messages": [
+      {{"role": "user", "content": "Hello, how are you?"}}
+    ]
+  }}'
+'''
+
+    # 生成 Python 示例
+    python_example = f'''import requests
+
+url = "{base_url}/v1/chat/completions"
+headers = {{
+    "Content-Type": "application/json",
+    "Authorization": "Bearer {api_key}"
+}}
+data = {{
+    "model": "gemini-2.5-flash",
+    "messages": [
+        {{"role": "user", "content": "Hello, how are you?"}}
+    ]
+}}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())
+'''
+
+    # 生成 Python (OpenAI SDK) 示例
+    python_openai_example = f'''from openai import OpenAI
+
+client = OpenAI(
+    api_key="{api_key}",
+    base_url="{base_url}/v1"
+)
+
+response = client.chat.completions.create(
+    model="gemini-2.5-flash",
+    messages=[
+        {{"role": "user", "content": "Hello, how are you?"}}
+    ]
+)
+
+print(response.choices[0].message.content)
+'''
+
+    # 生成流式响应示例
+    curl_stream_example = f'''curl {base_url}/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer {api_key}" \\
+  -d '{{
+    "model": "gemini-2.5-flash",
+    "messages": [
+      {{"role": "user", "content": "Write a short poem"}}
+    ],
+    "stream": true
+  }}'
+'''
+
+    python_stream_example = f'''from openai import OpenAI
+
+client = OpenAI(
+    api_key="{api_key}",
+    base_url="{base_url}/v1"
+)
+
+stream = client.chat.completions.create(
+    model="gemini-2.5-flash",
+    messages=[
+        {{"role": "user", "content": "Write a short poem"}}
+    ],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="")
+'''
+
+    return jsonify({
+        "base_url": base_url,
+        "api_key": api_key,
+        "api_keys_count": len(API_KEYS),
+        "all_api_keys": API_KEYS,
+        "examples": {
+            "curl": curl_example,
+            "curl_stream": curl_stream_example,
+            "python_requests": python_example,
+            "python_openai": python_openai_example,
+            "python_stream": python_stream_example
+        }
+    })
 
 
 if __name__ == "__main__":

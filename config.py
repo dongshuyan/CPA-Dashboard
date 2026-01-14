@@ -85,8 +85,14 @@ ANTIGRAVITY_CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.goo
 ANTIGRAVITY_CLIENT_SECRET = "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"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
+# API Keys (从 config.yaml 读取，用于显示使用示例)
+API_KEYS = _project_config.get("api-keys", [])
+API_PORT = _port
+API_HOST = _host or "127.0.0.1"
+
 # 打印配置信息
 if __name__ == "__main__":
     print(f"Management API URL: {MANAGEMENT_API_URL}")
     print(f"Auth Dir: {AUTH_DIR}")
     print(f"API Key: {'已配置' if MANAGEMENT_API_KEY else '未配置'}")
+    print(f"API Keys Count: {len(API_KEYS)}")

@@ -856,6 +856,149 @@
             opacity: 0.5;
         }
 
+        /* Usage Guide Page Styles */
+        .usage-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .usage-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .usage-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .connection-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            background: var(--bg-input);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 0.3rem 0.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+        }
+
+        .copy-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .copy-btn.copied {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: white;
+        }
+
+        .keys-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .key-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg-input);
+            border-radius: 6px;
+        }
+
+        .key-item code {
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .code-block {
+            background: var(--bg-input);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-secondary);
+            margin: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-block::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .code-block::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .code-block::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -904,6 +1047,10 @@
                 <button class="nav-tab" data-page="accounts">
                     <span class="icon">👤</span>
                     账户管理
+                </button>
+                <button class="nav-tab" data-page="usage">
+                    <span class="icon">📖</span>
+                    使用说明
                 </button>
             </nav>
         </header>
@@ -1076,6 +1223,128 @@
                 </div>
             </div>
         </div>
+
+        <!-- Usage Guide Page -->
+        <div class="page" id="page-usage">
+            <div class="usage-header">
+                <h2>API 使用说明</h2>
+                <p>CLIProxyAPI 提供 OpenAI 兼容的 API 接口，支持多种模型</p>
+            </div>
+
+            <!-- Connection Info -->
+            <div class="panel" style="margin-bottom: 1.5rem;">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="icon">🔗</span>
+                        连接信息
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="loadUsageGuide()">
+                        <span>🔄</span> 刷新
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <div class="connection-info">
+                        <div class="info-item">
+                            <span class="info-label">Base URL</span>
+                            <div class="info-value-wrapper">
+                                <code class="info-value" id="baseUrl">-</code>
+                                <button class="copy-btn" onclick="copyToClipboard(document.getElementById('baseUrl').textContent)">📋</button>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">API Key</span>
+                            <div class="info-value-wrapper">
+                                <code class="info-value" id="apiKey">-</code>
+                                <button class="copy-btn" onclick="copyToClipboard(document.getElementById('apiKey').textContent)">📋</button>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">可用 Keys</span>
+                            <span class="info-value" id="apiKeysCount">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- All API Keys -->
+                    <div class="all-keys-section" id="allKeysSection" style="display: none; margin-top: 1rem;">
+                        <div class="info-label" style="margin-bottom: 0.5rem;">所有 API Keys</div>
+                        <div class="keys-list" id="allKeysList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Examples -->
+            <div class="examples-grid">
+                <!-- Curl Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">💻</span>
+                            cURL 命令
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('curlExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="curlExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Curl Stream Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🌊</span>
+                            cURL 流式响应
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('curlStreamExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="curlStreamExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Python Requests Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🐍</span>
+                            Python (requests)
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('pythonRequestsExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="pythonRequestsExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Python OpenAI SDK Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🤖</span>
+                            Python (OpenAI SDK)
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('pythonOpenaiExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="pythonOpenaiExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Python Stream Example -->
+                <div class="panel" style="grid-column: 1 / -1;">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🌊</span>
+                            Python 流式响应 (OpenAI SDK)
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('pythonStreamExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="pythonStreamExample">加载中...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1103,6 +1372,10 @@
                 } else if (tab.dataset.page === 'accounts') {
                     if (accounts.length === 0) {
                         loadAccounts();
+                    }
+                } else if (tab.dataset.page === 'usage') {
+                    if (!usageGuideData) {
+                        loadUsageGuide();
                     }
                 }
             });
@@ -1675,6 +1948,56 @@
                 renderAccounts();
             });
         });
+
+        // ==================== Usage Guide ====================
+        let usageGuideData = null;
+
+        async function loadUsageGuide() {
+            try {
+                const resp = await fetch('/api/usage-guide');
+                const data = await resp.json();
+                usageGuideData = data;
+                renderUsageGuide(data);
+            } catch (error) {
+                console.error('加载使用说明失败:', error);
+                showToast('加载使用说明失败', 'error');
+            }
+        }
+
+        function renderUsageGuide(data) {
+            // Connection info
+            document.getElementById('baseUrl').textContent = data.base_url;
+            document.getElementById('apiKey').textContent = data.api_key;
+            document.getElementById('apiKeysCount').textContent = `${data.api_keys_count} 个`;
+
+            // All keys
+            if (data.all_api_keys && data.all_api_keys.length > 0) {
+                document.getElementById('allKeysSection').style.display = 'block';
+                const keysList = document.getElementById('allKeysList');
+                keysList.innerHTML = data.all_api_keys.map(key => `
+                    <div class="key-item">
+                        <code>${key}</code>
+                        <button class="copy-btn" onclick="copyToClipboard('${key}')">📋</button>
+                    </div>
+                `).join('');
+            }
+
+            // Code examples
+            document.getElementById('curlExample').textContent = data.examples.curl;
+            document.getElementById('curlStreamExample').textContent = data.examples.curl_stream;
+            document.getElementById('pythonRequestsExample').textContent = data.examples.python_requests;
+            document.getElementById('pythonOpenaiExample').textContent = data.examples.python_openai;
+            document.getElementById('pythonStreamExample').textContent = data.examples.python_stream;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板', 'success');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showToast('复制失败', 'error');
+            });
+        }
 
         // ==================== Initial Load ====================
         refreshStatus();
