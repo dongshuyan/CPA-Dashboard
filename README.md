@@ -19,6 +19,8 @@ CLIProxyAPI 控制面板 - 服务管理与账户监控 Web 界面。
 - 单个账户配额刷新
 - 批量并行刷新所有账户配额（并行度 4）
 - 按类型/会员等级筛选
+- **添加账户**：通过 OAuth 登录添加新账户（支持 Antigravity/Gemini/Codex/Claude/Qwen/iFlow）
+- **删除账户**：删除指定账户（带确认对话框）
 
 ## 安装
 
@@ -101,9 +103,35 @@ python app.py
   - 账户状态（活跃/沉默）
   - 配额信息：各模型的使用百分比及重置倒计时
 - **操作按钮**：
+  - 添加账户 - 通过 OAuth 登录添加新账户
   - 刷新列表 - 重新加载账户列表
   - 刷新所有配额 - 批量并行刷新所有账户的配额信息
   - 单个账户刷新 - 点击卡片上的刷新按钮
+  - 删除账户 - 点击卡片上的删除按钮（带确认对话框）
+
+### 添加账户
+
+添加账户支持以下 Provider：
+
+| Provider | 说明 | 回调端口 |
+|----------|------|----------|
+| Antigravity | Google Antigravity 账户 | 51121 |
+| Gemini CLI | Google Gemini CLI 账户 | 8085 |
+| Codex | OpenAI Codex 账户 | 1455 |
+| Claude | Anthropic Claude 账户 | 54545 |
+| Qwen | 通义千问账户 | 设备码模式 |
+| iFlow | iFlow 账户 | 55998 |
+
+**远程服务器使用提示**：
+
+如果 CLIProxyAPI 运行在远程服务器上，需要设置 SSH 端口转发：
+
+```bash
+# 以 Antigravity 为例
+ssh -L 51121:localhost:51121 user@server
+```
+
+然后在本地浏览器中完成 OAuth 认证。
 
 ### 使用说明
 
