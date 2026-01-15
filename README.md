@@ -38,8 +38,6 @@ python app.py
 # 在 CPA-Dashboard 目录下
 ./start.sh
 
-# 或在 CLIProxyAPI/scripts 目录下
-./start_webui.sh
 ```
 
 默认访问 http://127.0.0.1:5000
