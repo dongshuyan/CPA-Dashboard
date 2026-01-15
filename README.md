@@ -35,7 +35,10 @@ python app.py
 
 ### 方式二：通过启动脚本
 ```bash
-# 在 CLIProxyAPI/scripts 目录下
+# 在 CPA-Dashboard 目录下
+./start.sh
+
+# 或在 CLIProxyAPI/scripts 目录下
 ./start_webui.sh
 ```
 
