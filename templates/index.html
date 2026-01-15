@@ -1715,14 +1715,37 @@
                 return '<div class="no-quota" style="color: #f87171;">⚠️ 账户无权限 (403)</div>';
             }
 
-            let tokenStatusHtml = '';
+            // 检查是否为静态模型列表（无配额信息）
+            const isStaticList = quota.static_list === true;
+
+            let headerHtml = '';
             if (quota.token_status === 'refreshed') {
-                tokenStatusHtml = '<span class="token-status token-refreshed">🔄 Token 已刷新</span>';
+                headerHtml = '<span class="token-status token-refreshed">🔄 Token 已刷新</span>';
+            }
+            if (isStaticList && quota.note) {
+                headerHtml += `<div class="no-quota" style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem;">📋 ${quota.note}</div>`;
             }
 
             const modelsHtml = quota.models.map(model => {
+                // 对于静态列表，显示实际的 model name（可用于 API 请求）
+                const modelName = model.name || '';
+                const displayName = model.display_name || modelName;
+                const shortName = displayName.replace('models/', '').split('/').pop();
+                
+                // 静态列表：显示模型名称和复制按钮
+                if (isStaticList || model.percentage === null || model.percentage === undefined) {
+                    const description = model.description || '';
+                    return `
+                        <div class="quota-model" style="padding: 0.3rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <code class="model-name-code" style="font-family: monospace; font-size: 0.75rem; background: var(--bg-tertiary); padding: 0.15rem 0.4rem; border-radius: 3px; flex-shrink: 0;">${modelName}</code>
+                            <button class="copy-btn" onclick="copyToClipboard('${modelName}', this)" title="复制模型名称" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; cursor: pointer; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);">📋</button>
+                            <span style="font-size: 0.65rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;" title="${description}">${description}</span>
+                        </div>
+                    `;
+                }
+                
+                // 实时配额：显示配额条和百分比
                 const level = model.percentage >= 70 ? 'high' : model.percentage >= 30 ? 'medium' : 'low';
-                const shortName = model.name.replace('models/', '').split('/').pop();
                 const resetInfo = formatTimeRemaining(model.reset_time);
                 
                 const resetHtml = resetInfo 
@@ -1741,7 +1764,7 @@
                 `;
             }).join('');
 
-            return tokenStatusHtml + modelsHtml;
+            return headerHtml + modelsHtml;
         }
 
         function getTierClass(tier) {
@@ -1990,9 +2013,19 @@
             document.getElementById('pythonStreamExample').textContent = data.examples.python_stream;
         }
 
-        function copyToClipboard(text) {
+        function copyToClipboard(text, btn) {
             navigator.clipboard.writeText(text).then(() => {
                 showToast('已复制到剪贴板', 'success');
+                // 如果提供了按钮，显示复制成功反馈
+                if (btn) {
+                    const originalText = btn.textContent;
+                    btn.textContent = '✓';
+                    btn.style.color = '#22c55e';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.color = '';
+                    }, 1000);
+                }
             }).catch(err => {
                 console.error('复制失败:', err);
                 showToast('复制失败', 'error');

@@ -249,6 +249,15 @@ def api_accounts():
     return jsonify({"accounts": accounts, "auth_dir": AUTH_DIR, "mode": "api" if MANAGEMENT_API_KEY else "local"})
 
 
+# 支持配额查询的 provider 类型（与 quota_service 保持一致）
+# 注意：只有 Antigravity 可以使用 fetchAvailableModels API
+SUPPORTED_QUOTA_PROVIDERS = ["antigravity"]
+# 支持静态模型列表的 provider 类型（Gemini CLI 也是静态列表）
+STATIC_MODELS_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow", "aistudio", "vertex"]
+# 所有支持模型信息查询的 provider
+ALL_SUPPORTED_PROVIDERS = SUPPORTED_QUOTA_PROVIDERS + STATIC_MODELS_PROVIDERS
+
+
 @app.route("/api/accounts/<account_id>/quota", methods=["POST"])
 def api_refresh_account_quota(account_id: str):
     """刷新单个账户的配额"""
@@ -266,7 +275,7 @@ def api_refresh_account_quota(account_id: str):
     
     provider = auth_file.get("type", "").lower()
     
-    if provider != "antigravity":
+    if provider not in ALL_SUPPORTED_PROVIDERS:
         return jsonify({
             "error": f"暂不支持 {provider} 类型账户的配额查询",
             "account_id": account_id
@@ -308,18 +317,50 @@ def api_refresh_all_quotas():
     success_count = 0
     failed_count = 0
     skipped_count = 0
+    static_count = 0
     
     for auth_file in auth_files:
         account_id = auth_file.get("id") or auth_file.get("name", "")
         provider = auth_file.get("type", "").lower()
         
-        if provider != "antigravity":
+        if provider not in ALL_SUPPORTED_PROVIDERS:
             skipped_count += 1
             results.append({
                 "account_id": account_id,
                 "email": auth_file.get("email", ""),
                 "status": "skipped",
                 "message": f"不支持 {provider} 类型"
+            })
+            continue
+        
+        # 对于静态模型列表的 provider，直接获取静态列表
+        if provider in STATIC_MODELS_PROVIDERS:
+            static_count += 1
+            
+            # 获取认证数据
+            if "_raw_data" in auth_file:
+                auth_data = auth_file["_raw_data"]
+            else:
+                auth_data = download_auth_file(auth_file.get("name", ""))
+            
+            if not auth_data:
+                auth_data = {"type": provider}
+            
+            quota = get_quota_for_account(auth_data)
+            
+            # 更新缓存
+            quota_cache[account_id] = {
+                "quota": quota,
+                "subscription_tier": quota.get("subscription_tier"),
+                "fetched_at": time.time()
+            }
+            
+            results.append({
+                "account_id": account_id,
+                "email": auth_file.get("email", ""),
+                "status": "static",
+                "message": "静态模型列表",
+                "models_count": len(quota.get("models", []))
             })
             continue
         
@@ -371,6 +412,7 @@ def api_refresh_all_quotas():
     return jsonify({
         "total": len(auth_files),
         "success": success_count,
+        "static": static_count,
         "failed": failed_count,
         "skipped": skipped_count,
         "results": results

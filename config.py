@@ -76,11 +76,13 @@ else:
 CPA_BINARY_NAME = os.environ.get("CPA_BINARY_NAME", "CLIProxyAPI")
 CPA_LOG_FILE = os.environ.get("CPA_LOG_FILE", os.path.join(CPA_SERVICE_DIR, "cliproxyapi.log") if CPA_SERVICE_DIR else "")
 
-# Google Cloud Code API (用于获取 Antigravity 配额)
+# Google Cloud Code API (用于获取 Antigravity/Gemini CLI 配额)
 CLOUD_CODE_API_URL = "https://cloudcode-pa.googleapis.com"
 ANTIGRAVITY_USER_AGENT = "antigravity/1.11.3 Darwin/arm64"
+GEMINI_CLI_USER_AGENT = "google-api-nodejs-client/9.15.1"
 
-# OAuth 配置 (用于刷新 token)
+# OAuth 配置 (用于刷新 Antigravity token 以获取实时配额)
+# 注意：只有 Antigravity 支持实时配额查询，其他服务使用静态模型列表
 ANTIGRAVITY_CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 ANTIGRAVITY_CLIENT_SECRET = "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"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
