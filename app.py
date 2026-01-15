@@ -37,6 +37,23 @@ from quota_service import get_quota_for_account, refresh_access_token, fetch_pro
 
 app = Flask(__name__)
 
+
+@app.after_request
+def add_cache_control_headers(response):
+    """添加缓存控制头，防止浏览器缓存导致重启后 403 问题"""
+    # 对于 API 请求，禁用缓存
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    # 对于 HTML 页面，也禁用缓存
+    elif response.content_type and 'text/html' in response.content_type:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 # 配额缓存文件路径
 QUOTA_CACHE_FILE = Path(__file__).parent / "quota_cache.json"
 
