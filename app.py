@@ -430,6 +430,281 @@ def api_config():
     })
 
 
+# ==================== 账户管理 API ====================
+
+# 支持的 OAuth Provider 及其对应的命令行参数
+OAUTH_PROVIDERS = {
+    "antigravity": {"flag": "-antigravity-login", "port": 51121},
+    "gemini": {"flag": "-login", "port": 8085},
+    "codex": {"flag": "-codex-login", "port": 1455},
+    "claude": {"flag": "-claude-login", "port": 54545},
+    "qwen": {"flag": "-qwen-login", "port": 0},  # Qwen 使用设备码模式，无端口
+    "iflow": {"flag": "-iflow-login", "port": 55998},
+}
+
+# 存储正在进行的 OAuth 登录状态
+oauth_sessions = {}
+oauth_sessions_lock = __import__('threading').Lock()
+
+
+@app.route("/api/accounts/<account_name>", methods=["DELETE"])
+def api_delete_account(account_name: str):
+    """删除账户"""
+    if not account_name:
+        return jsonify({"error": "账户名称不能为空"}), 400
+    
+    # 优先通过 Management API 删除
+    try:
+        resp = requests.delete(
+            f"{MANAGEMENT_API_URL}/v0/management/auth-files",
+            params={"name": account_name},
+            headers=get_management_headers(),
+            timeout=10,
+            proxies=NO_PROXY
+        )
+        if resp.status_code == 200:
+            return jsonify({"success": True, "message": "账户已删除"})
+        elif resp.status_code == 404:
+            # Management API 返回 404 可能是文件不存在或 API 被禁用
+            pass  # 继续尝试本地删除
+        elif resp.status_code == 401:
+            return jsonify({"error": "需要配置 Management API Key (在 config.yaml 中设置 remote-management.secret-key)"}), 401
+        else:
+            return jsonify({"error": f"删除失败: {resp.text}"}), resp.status_code
+    except requests.exceptions.ConnectionError:
+        pass  # CLIProxyAPI 未运行，尝试本地删除
+    except Exception as e:
+        print(f"Management API 删除失败，尝试本地删除: {e}")
+    
+    # 本地模式：直接删除文件
+    file_path = Path(AUTH_DIR) / account_name
+    if not file_path.exists():
+        # 尝试添加 .json 后缀
+        file_path = Path(AUTH_DIR) / f"{account_name}.json"
+    
+    if not file_path.exists():
+        return jsonify({"error": "账户不存在"}), 404
+    
+    try:
+        file_path.unlink()
+        return jsonify({"success": True, "message": "账户已删除"})
+    except Exception as e:
+        return jsonify({"error": f"删除失败: {str(e)}"}), 500
+
+
+@app.route("/api/accounts/auth/<provider>", methods=["POST"])
+def api_start_oauth(provider: str):
+    """发起 OAuth 认证 (通过命令行方式)"""
+    import threading
+    import re
+    import uuid
+    
+    provider = provider.lower()
+    
+    if provider not in OAUTH_PROVIDERS:
+        return jsonify({
+            "error": f"不支持的 Provider: {provider}",
+            "supported": list(OAUTH_PROVIDERS.keys())
+        }), 400
+    
+    provider_config = OAUTH_PROVIDERS[provider]
+    flag = provider_config["flag"]
+    callback_port = provider_config["port"]
+    
+    # 检查 CLIProxyAPI 可执行文件
+    binary_path = os.path.join(CPA_SERVICE_DIR, CPA_BINARY_NAME)
+    if not os.path.exists(binary_path):
+        return jsonify({"error": f"CLIProxyAPI 可执行文件不存在: {binary_path}"}), 400
+    
+    # 生成会话 ID
+    session_id = str(uuid.uuid4())[:8]
+    
+    # 构建命令
+    cmd = [binary_path, flag, "-no-browser"]
+    
+    # 初始化会话状态
+    with oauth_sessions_lock:
+        oauth_sessions[session_id] = {
+            "status": "starting",
+            "provider": provider,
+            "url": None,
+            "error": None,
+            "process": None,
+            "output": ""
+        }
+    
+    def run_oauth_command():
+        try:
+            # 启动进程
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=CPA_SERVICE_DIR
+            )
+            
+            with oauth_sessions_lock:
+                if session_id in oauth_sessions:
+                    oauth_sessions[session_id]["process"] = process
+                    oauth_sessions[session_id]["status"] = "waiting_url"
+            
+            url_pattern = re.compile(r'(https?://[^\s]+)')
+            auth_url = None
+            output_lines = []
+            
+            # 读取输出，寻找认证 URL
+            for line in iter(process.stdout.readline, ''):
+                if not line:
+                    break
+                output_lines.append(line)
+                
+                # 更新输出
+                with oauth_sessions_lock:
+                    if session_id in oauth_sessions:
+                        oauth_sessions[session_id]["output"] += line
+                
+                # 检查是否包含认证 URL
+                if auth_url is None:
+                    match = url_pattern.search(line)
+                    if match:
+                        potential_url = match.group(1)
+                        # 确保是 OAuth URL
+                        if "accounts.google.com" in potential_url or \
+                           "console.anthropic.com" in potential_url or \
+                           "auth.openai.com" in potential_url or \
+                           "oauth" in potential_url.lower():
+                            auth_url = potential_url.rstrip(')')
+                            with oauth_sessions_lock:
+                                if session_id in oauth_sessions:
+                                    oauth_sessions[session_id]["url"] = auth_url
+                                    oauth_sessions[session_id]["status"] = "waiting_callback"
+                
+                # 检查是否完成
+                if "successful" in line.lower() or "authentication saved" in line.lower():
+                    with oauth_sessions_lock:
+                        if session_id in oauth_sessions:
+                            oauth_sessions[session_id]["status"] = "ok"
+                    break
+                
+                if "failed" in line.lower() or "error" in line.lower():
+                    # 可能是错误，但继续读取
+                    pass
+            
+            # 等待进程完成
+            process.wait()
+            
+            with oauth_sessions_lock:
+                if session_id in oauth_sessions:
+                    session = oauth_sessions[session_id]
+                    if process.returncode == 0:
+                        if session["status"] != "ok":
+                            session["status"] = "ok"
+                    else:
+                        if session["status"] not in ["ok", "error"]:
+                            session["status"] = "error"
+                            session["error"] = f"进程退出码: {process.returncode}"
+                    
+        except Exception as e:
+            with oauth_sessions_lock:
+                if session_id in oauth_sessions:
+                    oauth_sessions[session_id]["status"] = "error"
+                    oauth_sessions[session_id]["error"] = str(e)
+    
+    # 在后台线程中启动 OAuth 流程
+    thread = threading.Thread(target=run_oauth_command, daemon=True)
+    thread.start()
+    
+    # 等待一小段时间，让进程启动并输出 URL
+    time.sleep(2)
+    
+    with oauth_sessions_lock:
+        session = oauth_sessions.get(session_id, {})
+        auth_url = session.get("url")
+        status = session.get("status", "unknown")
+    
+    if auth_url:
+        return jsonify({
+            "success": True,
+            "url": auth_url,
+            "state": session_id,
+            "provider": provider,
+            "callback_port": callback_port,
+            "hint": f"请在浏览器中打开上述链接完成认证。如果是远程服务器，请确保端口 {callback_port} 可访问（可使用 SSH 端口转发: ssh -L {callback_port}:localhost:{callback_port} user@server）"
+        })
+    else:
+        # 再等待一下
+        time.sleep(1)
+        with oauth_sessions_lock:
+            session = oauth_sessions.get(session_id, {})
+            auth_url = session.get("url")
+            output = session.get("output", "")
+        
+        if auth_url:
+            return jsonify({
+                "success": True,
+                "url": auth_url,
+                "state": session_id,
+                "provider": provider,
+                "callback_port": callback_port
+            })
+        
+        return jsonify({
+            "error": "未能获取认证 URL，请检查 CLIProxyAPI 日志",
+            "output": output[-500:] if output else "",
+            "state": session_id
+        }), 500
+
+
+@app.route("/api/accounts/auth/status")
+def api_oauth_status():
+    """查询 OAuth 认证状态"""
+    state = request.args.get("state", "")
+    
+    if not state:
+        return jsonify({"error": "缺少 state 参数"}), 400
+    
+    with oauth_sessions_lock:
+        session = oauth_sessions.get(state)
+        if not session:
+            return jsonify({"status": "unknown", "error": "会话不存在"}), 404
+        
+        status = session.get("status", "unknown")
+        error = session.get("error")
+        output = session.get("output", "")[-200:]  # 最后 200 字符
+    
+    if status == "ok":
+        # 清理会话
+        with oauth_sessions_lock:
+            oauth_sessions.pop(state, None)
+        return jsonify({"status": "ok"})
+    elif status == "error":
+        return jsonify({"status": "error", "error": error or "认证失败"})
+    elif status in ["waiting_url", "waiting_callback"]:
+        return jsonify({"status": "wait", "detail": output})
+    else:
+        return jsonify({"status": "wait", "detail": status})
+
+
+@app.route("/api/accounts/auth/cancel", methods=["POST"])
+def api_cancel_oauth():
+    """取消 OAuth 认证"""
+    state = request.args.get("state", "") or (request.json or {}).get("state", "")
+    
+    if not state:
+        return jsonify({"error": "缺少 state 参数"}), 400
+    
+    with oauth_sessions_lock:
+        session = oauth_sessions.pop(state, None)
+        if session and session.get("process"):
+            try:
+                session["process"].terminate()
+            except Exception:
+                pass
+    
+    return jsonify({"success": True, "message": "会话已取消"})
+
+
 # ==================== 服务控制 API ====================
 
 def get_service_status():

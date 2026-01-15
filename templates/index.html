@@ -821,6 +821,283 @@
             background: currentColor;
         }
 
+        /* Account actions */
+        .account-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .delete-btn {
+            padding: 0.35rem 0.5rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0.6;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            opacity: 1;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+            overflow-y: auto;
+            max-height: calc(90vh - 140px);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        /* Provider buttons */
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .provider-btn {
+            padding: 1rem;
+            background: var(--bg-input);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .provider-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .provider-btn.selected {
+            background: rgba(79, 140, 255, 0.1);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(79, 140, 255, 0.2);
+        }
+
+        .provider-btn .provider-icon {
+            font-size: 1.5rem;
+        }
+
+        .provider-btn .provider-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Auth URL section */
+        .auth-url-section {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .auth-url-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auth-url-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .auth-url-container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .auth-url-input {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .auth-url-copy-btn {
+            padding: 0.75rem 1rem;
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        .auth-url-copy-btn:hover {
+            background: #3b7ff5;
+        }
+
+        .auth-url-copy-btn.copied {
+            background: var(--accent-green);
+        }
+
+        /* Auth status */
+        .auth-status {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-status.waiting {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+        }
+
+        .auth-status.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .auth-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .auth-status .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Confirm dialog */
+        .confirm-dialog {
+            text-align: center;
+        }
+
+        .confirm-dialog .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .confirm-dialog h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-dialog p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-dialog .account-name {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-cyan);
+            background: var(--bg-input);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
         /* Toast */
         .toast {
             position: fixed;
@@ -1165,6 +1442,9 @@
         <div class="page" id="page-accounts">
             <div class="actions" style="margin-bottom: 1.25rem; justify-content: flex-end;">
                 <span class="progress-info" id="progressInfo"></span>
+                <button class="btn btn-success" onclick="showAddAccountModal()">
+                    <span>➕</span> 添加账户
+                </button>
                 <button class="btn btn-secondary" onclick="loadAccounts()">
                     <span>🔄</span> 刷新列表
                 </button>
@@ -1343,6 +1623,99 @@
                         <pre class="code-block" id="pythonStreamExample">加载中...</pre>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div class="modal-overlay" id="addAccountModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>➕</span>
+                    添加账户
+                </div>
+                <button class="modal-close" onclick="closeAddAccountModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                    选择要添加的账户类型，点击后将生成认证链接
+                </p>
+                
+                <div class="provider-grid">
+                    <button class="provider-btn" data-provider="antigravity" onclick="selectProvider('antigravity')">
+                        <span class="provider-icon">🚀</span>
+                        <span class="provider-name">Antigravity</span>
+                    </button>
+                    <button class="provider-btn" data-provider="gemini" onclick="selectProvider('gemini')">
+                        <span class="provider-icon">✨</span>
+                        <span class="provider-name">Gemini CLI</span>
+                    </button>
+                    <button class="provider-btn" data-provider="codex" onclick="selectProvider('codex')">
+                        <span class="provider-icon">🤖</span>
+                        <span class="provider-name">Codex (OpenAI)</span>
+                    </button>
+                    <button class="provider-btn" data-provider="claude" onclick="selectProvider('claude')">
+                        <span class="provider-icon">🧠</span>
+                        <span class="provider-name">Claude</span>
+                    </button>
+                    <button class="provider-btn" data-provider="qwen" onclick="selectProvider('qwen')">
+                        <span class="provider-icon">🔮</span>
+                        <span class="provider-name">Qwen</span>
+                    </button>
+                    <button class="provider-btn" data-provider="iflow" onclick="selectProvider('iflow')">
+                        <span class="provider-icon">🌊</span>
+                        <span class="provider-name">iFlow</span>
+                    </button>
+                </div>
+
+                <div class="auth-url-section" id="authUrlSection">
+                    <div class="auth-url-label">认证链接（复制后在浏览器中打开）</div>
+                    <div class="auth-url-container">
+                        <div class="auth-url-input" id="authUrlInput">-</div>
+                        <button class="auth-url-copy-btn" id="authUrlCopyBtn" onclick="copyAuthUrl()">
+                            📋 复制
+                        </button>
+                    </div>
+                    <div class="auth-hint" id="authHint" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; font-size: 0.75rem; color: #fbbf24;">
+                        <strong>💡 远程服务器提示:</strong><br>
+                        <span id="authHintText"></span>
+                    </div>
+                    <div class="auth-status waiting" id="authStatus" style="display: none;">
+                        <div class="spinner"></div>
+                        <span id="authStatusText">等待认证完成...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeAddAccountModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal-overlay" id="deleteConfirmModal" style="display: none;">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>⚠️</span>
+                    确认删除
+                </div>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-dialog">
+                    <div class="icon">🗑️</div>
+                    <h3>确定要删除此账户吗？</h3>
+                    <p>账户: <span class="account-name" id="deleteAccountName">-</span></p>
+                    <p style="color: var(--accent-red); font-size: 0.8rem;">此操作不可恢复</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeDeleteModal()">取消</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDeleteAccount()">
+                    <span>🗑️</span> 确认删除
+                </button>
             </div>
         </div>
     </div>
@@ -1667,6 +2040,7 @@
             const providerClass = `provider-${account.type}`;
             const statusClass = account.disabled ? 'status-disabled' : 'status-active';
             const statusText = account.disabled ? '已禁用' : '活跃';
+            const accountName = account.name || account.id;
 
             return `
                 <div class="account-card" data-id="${account.id}" id="card-${account.id}">
@@ -1681,7 +2055,12 @@
                                 </span>
                             </div>
                         </div>
-                        ${tierName ? `<span class="tier-badge ${tierClass}">${tierName}</span>` : '<span class="tier-badge tier-unknown">-</span>'}
+                        <div class="account-actions">
+                            ${tierName ? `<span class="tier-badge ${tierClass}">${tierName}</span>` : '<span class="tier-badge tier-unknown">-</span>'}
+                            <button class="delete-btn" onclick="confirmDeleteAccount('${accountName}', '${account.email || account.name || '未知'}')" title="删除账户">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="quota-section">
@@ -2031,6 +2410,236 @@
                 showToast('复制失败', 'error');
             });
         }
+
+        // ==================== Account Management ====================
+        let currentAuthState = null;
+        let authStatusInterval = null;
+        let pendingDeleteAccount = null;
+
+        function showAddAccountModal() {
+            document.getElementById('addAccountModal').style.display = 'flex';
+            // Reset state
+            document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('authUrlSection').classList.remove('active');
+            document.getElementById('authStatus').style.display = 'none';
+            currentAuthState = null;
+            if (authStatusInterval) {
+                clearInterval(authStatusInterval);
+                authStatusInterval = null;
+            }
+        }
+
+        function closeAddAccountModal() {
+            document.getElementById('addAccountModal').style.display = 'none';
+            // Clear polling
+            if (authStatusInterval) {
+                clearInterval(authStatusInterval);
+                authStatusInterval = null;
+            }
+            currentAuthState = null;
+        }
+
+        async function selectProvider(provider) {
+            // Update UI
+            document.querySelectorAll('.provider-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.provider === provider);
+            });
+
+            const authUrlSection = document.getElementById('authUrlSection');
+            const authUrlInput = document.getElementById('authUrlInput');
+            const authStatus = document.getElementById('authStatus');
+            const authStatusText = document.getElementById('authStatusText');
+            const authHint = document.getElementById('authHint');
+            const authHintText = document.getElementById('authHintText');
+
+            authUrlInput.textContent = '正在启动认证流程...';
+            authUrlSection.classList.add('active');
+            authStatus.style.display = 'none';
+            authHint.style.display = 'none';
+
+            // Clear previous polling
+            if (authStatusInterval) {
+                clearInterval(authStatusInterval);
+                authStatusInterval = null;
+            }
+
+            try {
+                const resp = await fetch(`/api/accounts/auth/${provider}`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    authUrlInput.textContent = data.url;
+                    currentAuthState = data.state;
+
+                    // Show hint for remote server
+                    if (data.callback_port && data.callback_port > 0) {
+                        authHint.style.display = 'block';
+                        authHintText.innerHTML = `如果是远程服务器，请先设置 SSH 端口转发:<br><code style="background: var(--bg-input); padding: 2px 6px; border-radius: 4px; font-family: monospace;">ssh -L ${data.callback_port}:localhost:${data.callback_port} user@server</code>`;
+                    }
+
+                    // Show waiting status
+                    authStatus.className = 'auth-status waiting';
+                    authStatus.style.display = 'flex';
+                    authStatusText.textContent = '等待认证完成... 请在浏览器中完成认证';
+
+                    // Start polling for status
+                    startAuthStatusPolling(data.state);
+                } else {
+                    authUrlInput.textContent = data.error || '获取认证链接失败';
+                    authStatus.className = 'auth-status error';
+                    authStatus.style.display = 'flex';
+                    authStatusText.textContent = data.error || '获取认证链接失败';
+                    
+                    // Show output if available
+                    if (data.output) {
+                        authHint.style.display = 'block';
+                        authHintText.innerHTML = `<strong>命令输出:</strong><br><code style="white-space: pre-wrap;">${data.output}</code>`;
+                    }
+                }
+            } catch (error) {
+                authUrlInput.textContent = '请求失败: ' + error.message;
+                authStatus.className = 'auth-status error';
+                authStatus.style.display = 'flex';
+                authStatusText.textContent = '请求失败: ' + error.message;
+            }
+        }
+
+        function startAuthStatusPolling(state) {
+            let attempts = 0;
+            const maxAttempts = 300; // 5 minutes at 1s intervals
+
+            authStatusInterval = setInterval(async () => {
+                attempts++;
+                
+                if (attempts > maxAttempts) {
+                    clearInterval(authStatusInterval);
+                    authStatusInterval = null;
+                    
+                    const authStatus = document.getElementById('authStatus');
+                    const authStatusText = document.getElementById('authStatusText');
+                    authStatus.className = 'auth-status error';
+                    authStatusText.textContent = '认证超时，请重试';
+                    return;
+                }
+
+                try {
+                    const resp = await fetch(`/api/accounts/auth/status?state=${state}`);
+                    const data = await resp.json();
+
+                    const authStatus = document.getElementById('authStatus');
+                    const authStatusText = document.getElementById('authStatusText');
+
+                    if (data.status === 'ok') {
+                        // Auth completed successfully
+                        clearInterval(authStatusInterval);
+                        authStatusInterval = null;
+                        
+                        authStatus.className = 'auth-status success';
+                        authStatusText.textContent = '✓ 认证成功！账户已添加';
+                        
+                        showToast('账户添加成功', 'success');
+                        
+                        // Refresh accounts list after a short delay
+                        setTimeout(() => {
+                            loadAccounts();
+                            closeAddAccountModal();
+                        }, 1500);
+                    } else if (data.status === 'error') {
+                        // Auth failed
+                        clearInterval(authStatusInterval);
+                        authStatusInterval = null;
+                        
+                        authStatus.className = 'auth-status error';
+                        authStatusText.textContent = data.error || '认证失败';
+                    }
+                    // status === 'wait' means still pending, continue polling
+                } catch (error) {
+                    console.error('Status polling error:', error);
+                }
+            }, 1000);
+        }
+
+        function copyAuthUrl() {
+            const authUrl = document.getElementById('authUrlInput').textContent;
+            if (!authUrl || authUrl === '-' || authUrl.startsWith('正在获取') || authUrl.startsWith('请求失败')) {
+                showToast('没有可复制的链接', 'error');
+                return;
+            }
+
+            navigator.clipboard.writeText(authUrl).then(() => {
+                const btn = document.getElementById('authUrlCopyBtn');
+                btn.textContent = '✓ 已复制';
+                btn.classList.add('copied');
+                showToast('认证链接已复制到剪贴板', 'success');
+                
+                setTimeout(() => {
+                    btn.textContent = '📋 复制';
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                showToast('复制失败: ' + err.message, 'error');
+            });
+        }
+
+        function confirmDeleteAccount(accountName, displayName) {
+            pendingDeleteAccount = accountName;
+            document.getElementById('deleteAccountName').textContent = displayName || accountName;
+            document.getElementById('deleteConfirmModal').style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+            pendingDeleteAccount = null;
+        }
+
+        async function executeDeleteAccount() {
+            if (!pendingDeleteAccount) return;
+
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 删除中...';
+
+            try {
+                const resp = await fetch(`/api/accounts/${encodeURIComponent(pendingDeleteAccount)}`, {
+                    method: 'DELETE'
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    showToast('账户已删除', 'success');
+                    closeDeleteModal();
+                    loadAccounts(); // Refresh list
+                } else {
+                    showToast(data.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🗑️</span> 确认删除';
+            }
+        }
+
+        // Close modals on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAddAccountModal();
+                closeDeleteModal();
+            }
+        });
+
+        // Close modals on overlay click
+        document.getElementById('addAccountModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeAddAccountModal();
+            }
+        });
+
+        document.getElementById('deleteConfirmModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeDeleteModal();
+            }
+        });
 
         // ==================== Initial Load ====================
         refreshStatus();
