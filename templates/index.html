@@ -2133,7 +2133,8 @@
                 
                 return `
                     <div class="quota-model">
-                        <span class="model-name" title="${model.name}">${shortName}</span>
+                        <span class="model-name" title="${modelName}">${shortName}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${modelName}', this)" title="复制模型名称" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; cursor: pointer; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);">📋</button>
                         ${resetHtml}
                         <div class="quota-bar-container">
                             <div class="quota-bar ${level}" style="width: ${model.percentage}%"></div>

@@ -19,6 +19,39 @@ from config import (
 # Gemini CLI 使用个人 Google 账户，没有 fetchAvailableModels 权限
 SUPPORTED_QUOTA_PROVIDERS = ["antigravity"]
 
+# Antigravity API 返回的模型名称到 CLIProxyAPI 使用的别名映射
+# 参考 CLIProxyAPI/internal/runtime/executor/antigravity_executor.go 的 modelName2Alias 函数
+ANTIGRAVITY_MODEL_NAME_TO_ALIAS = {
+    "rev19-uic3-1p": "gemini-2.5-computer-use-preview-10-2025",
+    "gemini-3-pro-image": "gemini-3-pro-image-preview",
+    "gemini-3-pro-high": "gemini-3-pro-preview",
+    "gemini-3-flash": "gemini-3-flash-preview",
+    "claude-sonnet-4-5": "gemini-claude-sonnet-4-5",
+    "claude-sonnet-4-5-thinking": "gemini-claude-sonnet-4-5-thinking",
+    "claude-opus-4-5-thinking": "gemini-claude-opus-4-5-thinking",
+}
+
+# 需要跳过的模型（CLIProxyAPI 中 modelName2Alias 返回空字符串的模型）
+ANTIGRAVITY_SKIP_MODELS = {
+    "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", 
+    "gemini-3-pro-low", "gemini-2.5-pro"
+}
+
+
+def antigravity_model_name_to_alias(model_name: str) -> Optional[str]:
+    """
+    将 Antigravity API 返回的模型名称转换为 CLIProxyAPI 使用的别名
+    
+    Args:
+        model_name: Antigravity API 返回的原始模型名称
+        
+    Returns:
+        CLIProxyAPI 使用的模型别名，如果模型应该跳过则返回 None
+    """
+    if model_name in ANTIGRAVITY_SKIP_MODELS:
+        return None
+    return ANTIGRAVITY_MODEL_NAME_TO_ALIAS.get(model_name, model_name)
+
 # 支持显示静态模型列表的 provider 类型（无法获取实时配额，但可以显示支持的模型）
 # Gemini CLI 也使用静态列表
 STATIC_MODELS_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow", "aistudio", "vertex"]
@@ -308,13 +341,20 @@ def fetch_quota_with_token(access_token: str, project_id: Optional[str] = None, 
             if "gemini" not in name.lower() and "claude" not in name.lower():
                 continue
             
+            # 将 Antigravity API 返回的模型名称转换为 CLIProxyAPI 使用的别名
+            alias_name = antigravity_model_name_to_alias(name)
+            if alias_name is None:
+                # 跳过不支持的模型
+                continue
+            
             quota_info = info.get("quotaInfo", {})
             remaining_fraction = quota_info.get("remainingFraction", 0)
             percentage = int(remaining_fraction * 100)
             reset_time = quota_info.get("resetTime", "")
             
             result["models"].append({
-                "name": name,
+                "name": alias_name,  # 使用转换后的别名
+                "original_name": name,  # 保留原始名称以便调试
                 "percentage": percentage,
                 "reset_time": reset_time
             })
