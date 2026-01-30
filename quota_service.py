@@ -1,6 +1,7 @@
 """
 配额服务 - 负责获取账户配额信息
 支持 Antigravity 和 Gemini CLI 类型账户
+新增：支持验证所有 OAuth 账户的 token 有效性
 """
 import requests
 import time
@@ -18,6 +19,35 @@ from config import (
 # 注意：只有 Antigravity 可以使用 fetchAvailableModels API
 # Gemini CLI 使用个人 Google 账户，没有 fetchAvailableModels 权限
 SUPPORTED_QUOTA_PROVIDERS = ["antigravity"]
+
+# ==================== 各 OAuth 提供商配置 ====================
+# 用于验证 token 有效性（从 CLIProxyAPI 源码提取）
+
+# Gemini CLI (Google OAuth) - 不同于 Antigravity
+GEMINI_CLI_CLIENT_ID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
+GEMINI_CLI_CLIENT_SECRET = "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"
+
+# Codex (OpenAI OAuth)
+CODEX_TOKEN_URL = "https://auth.openai.com/oauth/token"
+CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+
+# Claude (Anthropic OAuth)
+CLAUDE_TOKEN_URL = "https://console.anthropic.com/v1/oauth/token"
+CLAUDE_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+
+# Qwen OAuth
+QWEN_TOKEN_URL = "https://chat.qwen.ai/api/v1/oauth2/token"
+QWEN_CLIENT_ID = "f0304373b74a44d2b584a3fb70ca9e56"
+
+# iFlow OAuth
+IFLOW_TOKEN_URL = "https://iflow.cn/oauth/token"
+IFLOW_CLIENT_ID = "10009311001"
+IFLOW_CLIENT_SECRET = "4Z3YjXycVsQvyGF1etiNlIBB4RsqSDtW"
+
+# 支持 token 验证的账户类型（有 OAuth refresh_token 的）
+TOKEN_VALIDATION_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow"]
+# 不支持 token 验证的账户类型（使用 API Key 或 Service Account）
+NO_TOKEN_VALIDATION_PROVIDERS = ["aistudio", "vertex"]
 
 # Antigravity API 返回的模型名称到 CLIProxyAPI 使用的别名映射
 # 参考 CLIProxyAPI/internal/runtime/executor/antigravity_executor.go 的 modelName2Alias 函数
@@ -140,12 +170,14 @@ STATIC_MODEL_LISTS = {
 }
 
 
-def get_static_models_for_provider(provider: str) -> dict:
+def get_static_models_for_provider(provider: str, auth_data: dict = None) -> dict:
     """
     获取不支持实时配额查询的 provider 的静态模型列表
+    同时验证 token 有效性（如果支持）
     
     Args:
         provider: 账户类型
+        auth_data: 账户认证数据（可选，用于验证 token）
         
     返回: 包含静态模型列表的配额信息字典
     """
@@ -156,7 +188,7 @@ def get_static_models_for_provider(provider: str) -> dict:
     
     models = STATIC_MODEL_LISTS.get(provider, [])
     
-    return {
+    result = {
         "models": [
             {
                 "name": m["name"],
@@ -173,6 +205,17 @@ def get_static_models_for_provider(provider: str) -> dict:
         "static_list": True,  # 标记为静态列表
         "note": f"此 {provider} 账户暂不支持实时配额查询，仅显示支持的模型列表"
     }
+    
+    # 如果提供了 auth_data，尝试验证 token
+    if auth_data is not None:
+        print(f"[配额服务] 开始验证 {provider} 账户的 token，auth_data type字段: {auth_data.get('type')}")
+        is_valid, token_status = validate_token_for_provider(auth_data, provider)
+        result["token_status"] = token_status
+        print(f"[配额服务] {provider} 账户验证结果: is_valid={is_valid}, token_status={token_status}")
+        if not is_valid:
+            result["error"] = "Token 验证失败，需要重新登录"
+    
+    return result
 
 
 # 禁用代理
@@ -212,6 +255,209 @@ def refresh_access_token(refresh_token: str, provider: str = "antigravity") -> O
     except Exception as e:
         print(f"Token 刷新异常 ({provider}): {e}")
         return None
+
+
+# ==================== Token 验证函数 ====================
+
+def validate_gemini_token(refresh_token: str) -> tuple[bool, str]:
+    """
+    验证 Gemini CLI 账户的 token 是否有效
+    
+    Returns: (is_valid, token_status)
+    """
+    try:
+        resp = requests.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "client_id": GEMINI_CLI_CLIENT_ID,
+                "client_secret": GEMINI_CLI_CLIENT_SECRET,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token
+            },
+            timeout=15,
+            proxies=NO_PROXY
+        )
+        if resp.status_code == 200:
+            return True, "refreshed"
+        print(f"Gemini token 验证失败: {resp.status_code} - {resp.text[:200]}")
+        return False, "refresh_failed"
+    except Exception as e:
+        print(f"Gemini token 验证异常: {e}")
+        return False, "error"
+
+
+def validate_codex_token(refresh_token: str) -> tuple[bool, str]:
+    """
+    验证 Codex (OpenAI) 账户的 token 是否有效
+    
+    Returns: (is_valid, token_status)
+    """
+    try:
+        resp = requests.post(
+            CODEX_TOKEN_URL,
+            data={
+                "client_id": CODEX_CLIENT_ID,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            },
+            timeout=15,
+            proxies=NO_PROXY
+        )
+        if resp.status_code == 200:
+            return True, "refreshed"
+        print(f"Codex token 验证失败: {resp.status_code} - {resp.text[:200]}")
+        return False, "refresh_failed"
+    except Exception as e:
+        print(f"Codex token 验证异常: {e}")
+        return False, "error"
+
+
+def validate_claude_token(refresh_token: str) -> tuple[bool, str]:
+    """
+    验证 Claude (Anthropic) 账户的 token 是否有效
+    
+    Returns: (is_valid, token_status)
+    """
+    try:
+        resp = requests.post(
+            CLAUDE_TOKEN_URL,
+            json={
+                "client_id": CLAUDE_CLIENT_ID,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            timeout=15,
+            proxies=NO_PROXY
+        )
+        if resp.status_code == 200:
+            return True, "refreshed"
+        print(f"Claude token 验证失败: {resp.status_code} - {resp.text[:200]}")
+        return False, "refresh_failed"
+    except Exception as e:
+        print(f"Claude token 验证异常: {e}")
+        return False, "error"
+
+
+def validate_qwen_token(refresh_token: str) -> tuple[bool, str]:
+    """
+    验证 Qwen 账户的 token 是否有效
+    
+    Returns: (is_valid, token_status)
+    """
+    try:
+        resp = requests.post(
+            QWEN_TOKEN_URL,
+            data={
+                "client_id": QWEN_CLIENT_ID,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            timeout=15,
+            proxies=NO_PROXY
+        )
+        if resp.status_code == 200:
+            return True, "refreshed"
+        print(f"Qwen token 验证失败: {resp.status_code} - {resp.text[:200]}")
+        return False, "refresh_failed"
+    except Exception as e:
+        print(f"Qwen token 验证异常: {e}")
+        return False, "error"
+
+
+def validate_iflow_token(refresh_token: str) -> tuple[bool, str]:
+    """
+    验证 iFlow 账户的 token 是否有效
+    
+    Returns: (is_valid, token_status)
+    """
+    try:
+        resp = requests.post(
+            IFLOW_TOKEN_URL,
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": IFLOW_CLIENT_ID,
+                "client_secret": IFLOW_CLIENT_SECRET
+            },
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            timeout=15,
+            proxies=NO_PROXY
+        )
+        if resp.status_code == 200:
+            return True, "refreshed"
+        print(f"iFlow token 验证失败: {resp.status_code} - {resp.text[:200]}")
+        return False, "refresh_failed"
+    except Exception as e:
+        print(f"iFlow token 验证异常: {e}")
+        return False, "error"
+
+
+def validate_token_for_provider(auth_data: dict, provider: str) -> tuple[bool, str]:
+    """
+    验证指定 provider 账户的 token 是否有效
+    
+    Args:
+        auth_data: 账户认证数据
+        provider: 账户类型
+        
+    Returns: (is_valid, token_status)
+        - is_valid: token 是否有效
+        - token_status: 状态字符串 ("refreshed", "refresh_failed", "error", "missing", "not_applicable")
+    """
+    provider = provider.lower()
+    
+    # 不支持验证的类型（API Key 或 Service Account）
+    if provider in NO_TOKEN_VALIDATION_PROVIDERS:
+        return True, "not_applicable"
+    
+    # 不在支持列表中
+    if provider not in TOKEN_VALIDATION_PROVIDERS:
+        return True, "not_applicable"
+    
+    # 提取 refresh_token
+    refresh_token = None
+    
+    if provider == "gemini":
+        # Gemini CLI 的 token 在嵌套的 "token" 对象中
+        token_data = auth_data.get("token", {})
+        if isinstance(token_data, dict):
+            refresh_token = token_data.get("refresh_token")
+    else:
+        # 其他类型的 refresh_token 在顶层
+        refresh_token = auth_data.get("refresh_token")
+    
+    if not refresh_token:
+        print(f"[Token验证] {provider} 账户缺少 refresh_token，auth_data 包含的字段: {list(auth_data.keys())}")
+        return False, "missing"
+    
+    print(f"[Token验证] 开始验证 {provider} 账户的 token...")
+    
+    # 调用对应的验证函数
+    if provider == "gemini":
+        return validate_gemini_token(refresh_token)
+    elif provider == "codex":
+        return validate_codex_token(refresh_token)
+    elif provider == "claude":
+        return validate_claude_token(refresh_token)
+    elif provider == "qwen":
+        return validate_qwen_token(refresh_token)
+    elif provider == "iflow":
+        return validate_iflow_token(refresh_token)
+    
+    return True, "not_applicable"
 
 
 def _get_gemini_cli_headers(access_token: str) -> dict:
@@ -408,14 +654,14 @@ def get_quota_for_account(auth_data: dict) -> dict:
     支持的账户类型:
     - antigravity: Antigravity/Google Cloud Code 账户（实时配额）
     - gemini: Gemini CLI 账户（实时配额）
-    - codex, claude, qwen, iflow, aistudio, vertex: 静态模型列表（无配额信息）
+    - codex, claude, qwen, iflow, aistudio, vertex: 静态模型列表（带 token 验证）
     """
     provider = auth_data.get("type", "").lower()
     
     # 检查是否支持实时配额查询
     if provider not in SUPPORTED_QUOTA_PROVIDERS:
-        # 检查是否支持静态模型列表
-        static_result = get_static_models_for_provider(provider)
+        # 检查是否支持静态模型列表（同时验证 token）
+        static_result = get_static_models_for_provider(provider, auth_data)
         if static_result:
             return static_result
         
