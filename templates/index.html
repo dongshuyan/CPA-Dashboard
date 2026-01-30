@@ -2597,10 +2597,14 @@
                 promptDetail.innerHTML = '📋 <strong>请选择项目</strong>：查看上方输出中的项目列表，输入项目 ID 或编号';
                 hintText.innerHTML = '输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 可以激活所有项目，或输入具体的项目编号/ID';
                 inputField.placeholder = '输入 ALL 或项目编号';
-            } else if (promptLower.includes('enter')) {
+            } else if (promptLower.includes('all') || promptLower.includes('project')) {
+                promptDetail.innerHTML = '📋 <strong>请选择项目</strong>：输入项目 ID、编号或 ALL';
+                hintText.innerHTML = '输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 激活所有项目，或输入项目编号。直接发送空内容选择默认项目';
+                inputField.placeholder = '输入 ALL / 项目编号 / 或留空选默认';
+            } else if (promptLower.includes('enter') || promptLower.includes('[1]') || promptLower.includes('[2]')) {
                 promptDetail.innerHTML = '⏎ <strong>请按提示输入</strong>：查看上方命令行输出了解需要输入的内容';
-                hintText.textContent = '如果只需要确认，可以直接点击发送（发送空内容相当于按 Enter）';
-                inputField.placeholder = '输入内容或直接点击发送';
+                hintText.textContent = '输入选项编号。直接发送空内容相当于按 Enter（选择默认选项）';
+                inputField.placeholder = '输入选项或留空选默认';
             } else {
                 promptDetail.innerHTML = '📝 <strong>请输入信息</strong>：' + (prompt || '查看上方命令行输出了解需要输入的内容');
                 hintText.textContent = '请根据命令行提示输入相应内容';
@@ -2622,12 +2626,8 @@
             }
 
             const inputField = document.getElementById('userInputField');
-            const userInput = inputField.value.trim();
-            
-            if (!userInput) {
-                showToast('请输入内容', 'error');
-                return;
-            }
+            // 不 trim，允许空字符串（相当于按回车）
+            const userInput = inputField.value;
 
             const sendBtn = document.getElementById('sendInputBtn');
             sendBtn.disabled = true;

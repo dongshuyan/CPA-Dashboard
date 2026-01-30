@@ -553,27 +553,40 @@ class InteractiveOAuthSession:
             "Paste the antigravity callback URL",
             "paste the callback URL",
             "callback URL",
-            # Gemini 项目选择
+            "press Enter to keep waiting",
+            # Gemini CLI 项目选择提示
             "Enter project ID",
-            "Enter choice",
-            "Which project ID",
+            "or ALL:",                                  # "Enter project ID [xxx] or ALL:"
+            "Available Google Cloud projects",         # 项目列表显示
+            "Type 'ALL' to onboard",                   # ALL 提示
+            # Gemini CLI 项目 ID 选择提示（前后端项目 ID 不同时）
+            "Enter choice [1]:",
+            "Which project ID would you like",
+            "[1] Backend (recommended)",
+            "[2] Frontend:",
             "Enter 1 or 2",
-            "[1]",
-            "[2]",
+            # Codex / Claude 等
+            "Enter choice",
+            "Enter your choice",
             # 通用
             "Please paste",
             "paste the URL",
-            "press Enter to keep waiting",
-            "Enter your choice",
             "输入项目",
             "选择",
         ]
         
+        # 成功关键词：只检测真正表示登录完成的消息
+        # 注意：不要用 "successful" 因为 "Authentication successful." 只是 OAuth 回调成功
+        # Gemini CLI 在 OAuth 后还需要选择项目，真正完成时会显示 "Gemini authentication successful!"
         success_keywords = [
-            "successful",
-            "Authentication saved",
-            "authentication successful",
-            "成功",
+            "Authentication saved",                    # 保存到文件
+            "Gemini authentication successful!",       # Gemini CLI 完成
+            "Codex authentication successful!",        # Codex 完成
+            "Claude authentication successful!",       # Claude 完成
+            "Qwen authentication successful!",         # Qwen 完成
+            "iFlow authentication successful!",        # iFlow 完成
+            "Antigravity authentication successful!",  # Antigravity 完成
+            "saved to",                                # 保存成功的通用标志
         ]
         
         # OAuth URL 域名列表
@@ -986,13 +999,13 @@ def api_oauth_input():
     """向 OAuth 认证进程发送输入"""
     data = request.json or {}
     state = data.get("state", "")
-    user_input = data.get("input", "")
+    # 允许空字符串输入（相当于按回车）
+    user_input = data.get("input") if data.get("input") is not None else ""
     
     if not state:
         return jsonify({"error": "缺少 state 参数"}), 400
     
-    if not user_input:
-        return jsonify({"error": "缺少 input 参数"}), 400
+    # 不再检查 user_input 是否为空，允许发送空字符串（回车）
     
     with oauth_sessions_lock:
         session = oauth_sessions.get(state)
