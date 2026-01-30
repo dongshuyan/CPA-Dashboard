@@ -2583,8 +2583,16 @@
             const promptDetail = document.getElementById('userInputPromptDetail');
             const hintText = document.getElementById('userInputHintText');
             const inputField = document.getElementById('userInputField');
+            const sendBtn = document.getElementById('sendInputBtn');
+            const label = document.getElementById('userInputLabel');
             
             section.style.display = 'block';
+            
+            // 确保输入框是可用的状态
+            inputField.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            label.innerHTML = '<span>⌨️</span><span>需要您输入信息</span>';
             
             // 根据提示类型显示不同的详细说明
             const promptLower = (prompt || '').toLowerCase();
@@ -2617,6 +2625,43 @@
         function hideUserInputSection() {
             document.getElementById('userInputSection').style.display = 'none';
             document.getElementById('userInputField').value = '';
+            window.inputPendingResponse = false;  // 重置等待状态
+        }
+
+        // 显示输入已发送、等待处理的状态
+        function showInputPendingState() {
+            const section = document.getElementById('userInputSection');
+            const promptDetail = document.getElementById('userInputPromptDetail');
+            const inputField = document.getElementById('userInputField');
+            const sendBtn = document.getElementById('sendInputBtn');
+            const hintText = document.getElementById('userInputHintText');
+            const label = document.getElementById('userInputLabel');
+            
+            section.style.display = 'block';
+            label.innerHTML = '<span>⏳</span><span>已发送，等待处理中...</span>';
+            promptDetail.innerHTML = '✅ <strong>输入已成功发送</strong>，正在等待命令行处理，请稍候...';
+            hintText.textContent = '如果需要再次输入，输入框会自动解锁';
+            inputField.disabled = true;
+            inputField.placeholder = '等待处理中...';
+            inputField.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = '等待中';
+            
+            window.inputPendingResponse = true;  // 标记为等待响应状态
+        }
+
+        // 解锁输入框（当确实需要新的输入时）
+        function unlockInputSection() {
+            const inputField = document.getElementById('userInputField');
+            const sendBtn = document.getElementById('sendInputBtn');
+            const label = document.getElementById('userInputLabel');
+            
+            inputField.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            label.innerHTML = '<span>⌨️</span><span>需要您输入信息</span>';
+            
+            window.inputPendingResponse = false;
         }
 
         async function sendUserInput() {
@@ -2645,18 +2690,19 @@
                 const data = await resp.json();
 
                 if (resp.ok && data.success) {
-                    inputField.value = '';
-                    hideUserInputSection();
-                    showToast('输入已发送', 'success');
+                    // 显示等待状态而不是隐藏输入框
+                    showInputPendingState();
+                    showToast('输入已发送，等待处理...', 'success');
                     
                     // Immediately refresh output
                     refreshCliOutput();
                 } else {
                     showToast(data.error || '发送失败', 'error');
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '发送';
                 }
             } catch (error) {
                 showToast('发送失败: ' + error.message, 'error');
-            } finally {
                 sendBtn.disabled = false;
                 sendBtn.textContent = '发送';
             }
@@ -2745,8 +2791,30 @@
                     } else if (data.status === 'needs_input' || data.needs_input) {
                         // Needs user input
                         authStatus.className = 'auth-status waiting';
-                        authStatusText.textContent = '⌨️ 需要输入信息，请查看下方输入框';
-                        showUserInputSection(data.input_prompt || '请输入信息');
+                        
+                        // 如果正在等待处理响应，检查是否是新的输入提示
+                        if (window.inputPendingResponse) {
+                            // 检查是否有新的不同的输入提示
+                            const currentPrompt = data.input_prompt || '';
+                            const lastPrompt = window.lastInputPrompt || '';
+                            
+                            // 如果提示相同，保持等待状态
+                            if (currentPrompt === lastPrompt || currentPrompt.toLowerCase().includes(lastPrompt.toLowerCase()) || lastPrompt.toLowerCase().includes(currentPrompt.toLowerCase())) {
+                                authStatusText.textContent = '⏳ 输入已发送，等待处理中...';
+                                // 保持等待状态，不解锁输入框
+                            } else {
+                                // 新的输入提示，解锁输入框
+                                authStatusText.textContent = '⌨️ 需要输入信息，请查看下方输入框';
+                                window.lastInputPrompt = currentPrompt;
+                                unlockInputSection();
+                                showUserInputSection(currentPrompt || '请输入信息');
+                            }
+                        } else {
+                            // 不在等待状态，正常显示输入框
+                            authStatusText.textContent = '⌨️ 需要输入信息，请查看下方输入框';
+                            window.lastInputPrompt = data.input_prompt || '';
+                            showUserInputSection(data.input_prompt || '请输入信息');
+                        }
                     } else {
                         // Still waiting
                         authStatus.className = 'auth-status waiting';
