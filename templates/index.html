@@ -1629,7 +1629,7 @@
 
     <!-- Add Account Modal -->
     <div class="modal-overlay" id="addAccountModal" style="display: none;">
-        <div class="modal">
+        <div class="modal" style="max-width: 700px;">
             <div class="modal-header">
                 <div class="modal-title">
                     <span>➕</span>
@@ -1639,7 +1639,7 @@
             </div>
             <div class="modal-body">
                 <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-                    选择要添加的账户类型，点击后将生成认证链接
+                    选择要添加的账户类型，点击后将启动认证流程
                 </p>
                 
                 <div class="provider-grid">
@@ -1681,6 +1681,40 @@
                         <strong>💡 远程服务器提示:</strong><br>
                         <span id="authHintText"></span>
                     </div>
+                    
+                    <!-- 命令行输出显示区域 -->
+                    <div class="cli-output-section" id="cliOutputSection" style="display: none; margin-top: 1rem;">
+                        <div class="cli-output-label" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                            命令行输出
+                            <button class="btn btn-ghost btn-sm" onclick="refreshCliOutput()" style="margin-left: 0.5rem; padding: 0.2rem 0.5rem;">🔄</button>
+                        </div>
+                        <div class="cli-output-container" id="cliOutputContainer" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; max-height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;">
+                            等待输出...
+                        </div>
+                    </div>
+                    
+                    <!-- 用户输入区域 -->
+                    <div class="user-input-section" id="userInputSection" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px;">
+                        <div class="user-input-label" id="userInputLabel" style="font-size: 0.9rem; color: var(--accent-orange); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <span>⌨️</span>
+                            <span>需要您输入信息</span>
+                        </div>
+                        <div id="userInputPromptDetail" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-input); border-radius: 6px;">
+                            请查看上方命令行输出，按提示输入相应内容
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="userInputField" placeholder="在此输入后按 Enter 或点击发送" 
+                                style="flex: 1; padding: 0.75rem; background: var(--bg-primary); border: 2px solid var(--accent-orange); border-radius: 8px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;"
+                                onkeydown="if(event.key==='Enter') sendUserInput()">
+                            <button class="btn btn-primary" onclick="sendUserInput()" id="sendInputBtn" style="background: var(--accent-orange); min-width: 80px;">
+                                发送
+                            </button>
+                        </div>
+                        <div id="userInputHint" style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted);">
+                            💡 提示：<span id="userInputHintText">Gemini CLI 登录时输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 可以激活所有项目；Antigravity 需要粘贴浏览器中的回调 URL</span>
+                        </div>
+                    </div>
+                    
                     <div class="auth-status waiting" id="authStatus" style="display: none;">
                         <div class="spinner"></div>
                         <span id="authStatusText">等待认证完成...</span>
@@ -2416,6 +2450,7 @@
         let currentAuthState = null;
         let authStatusInterval = null;
         let pendingDeleteAccount = null;
+        let isInteractiveSession = false;
 
         function showAddAccountModal() {
             document.getElementById('addAccountModal').style.display = 'flex';
@@ -2423,7 +2458,12 @@
             document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('selected'));
             document.getElementById('authUrlSection').classList.remove('active');
             document.getElementById('authStatus').style.display = 'none';
+            document.getElementById('cliOutputSection').style.display = 'none';
+            document.getElementById('userInputSection').style.display = 'none';
+            document.getElementById('cliOutputContainer').textContent = '等待输出...';
+            document.getElementById('userInputField').value = '';
             currentAuthState = null;
+            isInteractiveSession = false;
             if (authStatusInterval) {
                 clearInterval(authStatusInterval);
                 authStatusInterval = null;
@@ -2432,12 +2472,21 @@
 
         function closeAddAccountModal() {
             document.getElementById('addAccountModal').style.display = 'none';
+            // Cancel the auth session if active
+            if (currentAuthState) {
+                fetch('/api/accounts/auth/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state: currentAuthState })
+                }).catch(() => {});
+            }
             // Clear polling
             if (authStatusInterval) {
                 clearInterval(authStatusInterval);
                 authStatusInterval = null;
             }
             currentAuthState = null;
+            isInteractiveSession = false;
         }
 
         async function selectProvider(provider) {
@@ -2452,11 +2501,15 @@
             const authStatusText = document.getElementById('authStatusText');
             const authHint = document.getElementById('authHint');
             const authHintText = document.getElementById('authHintText');
+            const cliOutputSection = document.getElementById('cliOutputSection');
+            const userInputSection = document.getElementById('userInputSection');
 
             authUrlInput.textContent = '正在启动认证流程...';
             authUrlSection.classList.add('active');
             authStatus.style.display = 'none';
             authHint.style.display = 'none';
+            cliOutputSection.style.display = 'none';
+            userInputSection.style.display = 'none';
 
             // Clear previous polling
             if (authStatusInterval) {
@@ -2469,13 +2522,33 @@
                 const data = await resp.json();
 
                 if (resp.ok && data.success) {
-                    authUrlInput.textContent = data.url;
                     currentAuthState = data.state;
+                    isInteractiveSession = data.interactive === true;
+                    
+                    // Show URL if available
+                    if (data.url) {
+                        authUrlInput.textContent = data.url;
+                    } else {
+                        authUrlInput.textContent = '等待认证 URL...';
+                    }
 
                     // Show hint for remote server
                     if (data.callback_port && data.callback_port > 0) {
                         authHint.style.display = 'block';
                         authHintText.innerHTML = `如果是远程服务器，请先设置 SSH 端口转发:<br><code style="background: var(--bg-input); padding: 2px 6px; border-radius: 4px; font-family: monospace;">ssh -L ${data.callback_port}:localhost:${data.callback_port} user@server</code>`;
+                    }
+
+                    // Show CLI output section for interactive sessions
+                    if (isInteractiveSession) {
+                        cliOutputSection.style.display = 'block';
+                        if (data.output) {
+                            document.getElementById('cliOutputContainer').textContent = data.output;
+                        }
+                        
+                        // Show input section if needed
+                        if (data.needs_input) {
+                            showUserInputSection(data.input_prompt || '需要输入信息');
+                        }
                     }
 
                     // Show waiting status
@@ -2493,8 +2566,8 @@
                     
                     // Show output if available
                     if (data.output) {
-                        authHint.style.display = 'block';
-                        authHintText.innerHTML = `<strong>命令输出:</strong><br><code style="white-space: pre-wrap;">${data.output}</code>`;
+                        cliOutputSection.style.display = 'block';
+                        document.getElementById('cliOutputContainer').textContent = data.output;
                     }
                 }
             } catch (error) {
@@ -2505,9 +2578,111 @@
             }
         }
 
+        function showUserInputSection(prompt) {
+            const section = document.getElementById('userInputSection');
+            const promptDetail = document.getElementById('userInputPromptDetail');
+            const hintText = document.getElementById('userInputHintText');
+            const inputField = document.getElementById('userInputField');
+            
+            section.style.display = 'block';
+            
+            // 根据提示类型显示不同的详细说明
+            const promptLower = (prompt || '').toLowerCase();
+            
+            if (promptLower.includes('callback') || promptLower.includes('paste')) {
+                promptDetail.innerHTML = '🔗 <strong>请粘贴回调 URL</strong>：在浏览器中完成登录后，复制地址栏中的完整 URL 粘贴到下方';
+                hintText.textContent = '回调 URL 格式类似: http://localhost:51121/oauth-callback?code=...&state=...';
+                inputField.placeholder = '粘贴完整的回调 URL';
+            } else if (promptLower.includes('project') || promptLower.includes('choice') || promptLower.includes('[1]') || promptLower.includes('[2]')) {
+                promptDetail.innerHTML = '📋 <strong>请选择项目</strong>：查看上方输出中的项目列表，输入项目 ID 或编号';
+                hintText.innerHTML = '输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 可以激活所有项目，或输入具体的项目编号/ID';
+                inputField.placeholder = '输入 ALL 或项目编号';
+            } else if (promptLower.includes('enter')) {
+                promptDetail.innerHTML = '⏎ <strong>请按提示输入</strong>：查看上方命令行输出了解需要输入的内容';
+                hintText.textContent = '如果只需要确认，可以直接点击发送（发送空内容相当于按 Enter）';
+                inputField.placeholder = '输入内容或直接点击发送';
+            } else {
+                promptDetail.innerHTML = '📝 <strong>请输入信息</strong>：' + (prompt || '查看上方命令行输出了解需要输入的内容');
+                hintText.textContent = '请根据命令行提示输入相应内容';
+                inputField.placeholder = '输入后按 Enter 或点击发送';
+            }
+            
+            inputField.focus();
+        }
+
+        function hideUserInputSection() {
+            document.getElementById('userInputSection').style.display = 'none';
+            document.getElementById('userInputField').value = '';
+        }
+
+        async function sendUserInput() {
+            if (!currentAuthState) {
+                showToast('没有活动的认证会话', 'error');
+                return;
+            }
+
+            const inputField = document.getElementById('userInputField');
+            const userInput = inputField.value.trim();
+            
+            if (!userInput) {
+                showToast('请输入内容', 'error');
+                return;
+            }
+
+            const sendBtn = document.getElementById('sendInputBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '发送中...';
+
+            try {
+                const resp = await fetch('/api/accounts/auth/input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        state: currentAuthState,
+                        input: userInput
+                    })
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    inputField.value = '';
+                    hideUserInputSection();
+                    showToast('输入已发送', 'success');
+                    
+                    // Immediately refresh output
+                    refreshCliOutput();
+                } else {
+                    showToast(data.error || '发送失败', 'error');
+                }
+            } catch (error) {
+                showToast('发送失败: ' + error.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
+            }
+        }
+
+        async function refreshCliOutput() {
+            if (!currentAuthState) return;
+
+            try {
+                const resp = await fetch(`/api/accounts/auth/output?state=${currentAuthState}`);
+                const data = await resp.json();
+
+                if (resp.ok && data.output) {
+                    const container = document.getElementById('cliOutputContainer');
+                    container.textContent = data.output;
+                    // Auto scroll to bottom
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Refresh output error:', error);
+            }
+        }
+
         function startAuthStatusPolling(state) {
             let attempts = 0;
-            const maxAttempts = 300; // 5 minutes at 1s intervals
+            const maxAttempts = 600; // 10 minutes at 1s intervals (longer for interactive sessions)
 
             authStatusInterval = setInterval(async () => {
                 attempts++;
@@ -2529,6 +2704,19 @@
 
                     const authStatus = document.getElementById('authStatus');
                     const authStatusText = document.getElementById('authStatusText');
+                    const authUrlInput = document.getElementById('authUrlInput');
+
+                    // Update URL if available
+                    if (data.url && authUrlInput.textContent === '等待认证 URL...') {
+                        authUrlInput.textContent = data.url;
+                    }
+
+                    // Update CLI output if available
+                    if (data.output && isInteractiveSession) {
+                        const container = document.getElementById('cliOutputContainer');
+                        container.textContent = data.output;
+                        container.scrollTop = container.scrollHeight;
+                    }
 
                     if (data.status === 'ok') {
                         // Auth completed successfully
@@ -2537,6 +2725,7 @@
                         
                         authStatus.className = 'auth-status success';
                         authStatusText.textContent = '✓ 认证成功！账户已添加';
+                        hideUserInputSection();
                         
                         showToast('账户添加成功', 'success');
                         
@@ -2552,8 +2741,23 @@
                         
                         authStatus.className = 'auth-status error';
                         authStatusText.textContent = data.error || '认证失败';
+                        hideUserInputSection();
+                    } else if (data.status === 'needs_input' || data.needs_input) {
+                        // Needs user input
+                        authStatus.className = 'auth-status waiting';
+                        authStatusText.textContent = '⌨️ 需要输入信息，请查看下方输入框';
+                        showUserInputSection(data.input_prompt || '请输入信息');
+                    } else {
+                        // Still waiting
+                        authStatus.className = 'auth-status waiting';
+                        if (data.detail === 'waiting_callback') {
+                            authStatusText.textContent = '等待认证回调... 请在浏览器中完成认证';
+                        } else if (data.detail === 'running') {
+                            authStatusText.textContent = '认证流程进行中...';
+                        } else {
+                            authStatusText.textContent = '等待认证完成...';
+                        }
                     }
-                    // status === 'wait' means still pending, continue polling
                 } catch (error) {
                     console.error('Status polling error:', error);
                 }
@@ -2562,7 +2766,7 @@
 
         function copyAuthUrl() {
             const authUrl = document.getElementById('authUrlInput').textContent;
-            if (!authUrl || authUrl === '-' || authUrl.startsWith('正在获取') || authUrl.startsWith('请求失败')) {
+            if (!authUrl || authUrl === '-' || authUrl.startsWith('正在') || authUrl.startsWith('请求失败') || authUrl.startsWith('等待')) {
                 showToast('没有可复制的链接', 'error');
                 return;
             }
