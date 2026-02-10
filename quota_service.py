@@ -49,41 +49,6 @@ TOKEN_VALIDATION_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow"]
 # 不支持 token 验证的账户类型（使用 API Key 或 Service Account）
 NO_TOKEN_VALIDATION_PROVIDERS = ["aistudio", "vertex"]
 
-# Antigravity API 返回的模型名称到 CLIProxyAPI 使用的别名映射
-# 参考 CLIProxyAPI internal/config/oauth_model_alias_migration.go 的 defaultAntigravityAliases
-# 与 antigravity_executor.go 的跳过列表、GetAntigravityModelConfig 保持一致
-ANTIGRAVITY_MODEL_NAME_TO_ALIAS = {
-    "rev19-uic3-1p": "gemini-2.5-computer-use-preview-10-2025",
-    "gemini-3-pro-image": "gemini-3-pro-image-preview",
-    "gemini-3-pro-high": "gemini-3-pro-preview",
-    "gemini-3-flash": "gemini-3-flash-preview",
-    "claude-sonnet-4-5": "gemini-claude-sonnet-4-5",
-    "claude-sonnet-4-5-thinking": "gemini-claude-sonnet-4-5-thinking",
-    "claude-opus-4-5-thinking": "gemini-claude-opus-4-5-thinking",
-    "claude-opus-4-6-thinking": "gemini-claude-opus-4-6-thinking",
-}
-
-# 需要跳过的模型（与 CLIProxyAPI internal/runtime/executor/antigravity_executor.go 第 1077-1079 行一致）
-ANTIGRAVITY_SKIP_MODELS = {
-    "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", 
-    "gemini-3-pro-low", "gemini-2.5-pro"
-}
-
-
-def antigravity_model_name_to_alias(model_name: str) -> Optional[str]:
-    """
-    将 Antigravity API 返回的模型名称转换为 CLIProxyAPI 使用的别名
-    
-    Args:
-        model_name: Antigravity API 返回的原始模型名称
-        
-    Returns:
-        CLIProxyAPI 使用的模型别名，如果模型应该跳过则返回 None
-    """
-    if model_name in ANTIGRAVITY_SKIP_MODELS:
-        return None
-    return ANTIGRAVITY_MODEL_NAME_TO_ALIAS.get(model_name, model_name)
-
 # 支持显示静态模型列表的 provider 类型（无法获取实时配额，但可以显示支持的模型）
 # Gemini CLI 也使用静态列表
 STATIC_MODELS_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow", "aistudio", "vertex"]
@@ -587,26 +552,21 @@ def fetch_quota_with_token(access_token: str, project_id: Optional[str] = None, 
         
         data = resp.json()
         models = data.get("models", {})
+        # 调试：打印 API 返回的模型 key 列表，便于确认是否包含 opus 4.6 等
+        api_model_names = sorted(models.keys()) if models else []
+        print(f"[配额] fetchAvailableModels 返回 {len(api_model_names)} 个模型: {api_model_names}")
         
+        # API 返回的 meta 里有什么模型就显示什么模型，不做别名映射
         for name, info in models.items():
-            # 只保留 gemini 和 claude 相关模型
-            if "gemini" not in name.lower() and "claude" not in name.lower():
+            name = (name or "").strip()
+            if not name:
                 continue
-            
-            # 将 Antigravity API 返回的模型名称转换为 CLIProxyAPI 使用的别名
-            alias_name = antigravity_model_name_to_alias(name)
-            if alias_name is None:
-                # 跳过不支持的模型
-                continue
-            
             quota_info = info.get("quotaInfo", {})
             remaining_fraction = quota_info.get("remainingFraction", 0)
             percentage = int(remaining_fraction * 100)
             reset_time = quota_info.get("resetTime", "")
-            
             result["models"].append({
-                "name": alias_name,  # 使用转换后的别名
-                "original_name": name,  # 保留原始名称以便调试
+                "name": name,
                 "percentage": percentage,
                 "reset_time": reset_time
             })
@@ -625,18 +585,16 @@ def _extract_tokens_from_auth_data(auth_data: dict, provider: str) -> tuple[Opti
     """
     从认证数据中提取 token 信息
     
-    Antigravity 数据结构:
-        {"access_token": "...", "refresh_token": "...", "project_id": "..."}
+    支持两种格式:
+    - 扁平格式（filestore 写入）: {"type": "...", "access_token": "...", "refresh_token": "...", "project_id": "..."}
+    - 嵌套格式（Auth 完整结构）: {"metadata": {"access_token": "...", "refresh_token": "...", "project_id": "..."}}
     
-    Gemini CLI 数据结构:
-        {"token": {"access_token": "...", "refresh_token": "..."}, "project_id": "..."}
-    
-    返回: (access_token, refresh_token, project_id)
+    Gemini CLI: token 在 "token" 对象中
     """
-    project_id = auth_data.get("project_id")
+    meta = auth_data.get("metadata") if isinstance(auth_data.get("metadata"), dict) else {}
+    project_id = auth_data.get("project_id") or (meta.get("project_id") if meta else None)
     
     if provider == "gemini":
-        # Gemini CLI 的 token 在嵌套的 "token" 对象中
         token_data = auth_data.get("token", {})
         if isinstance(token_data, dict):
             access_token = token_data.get("access_token")
@@ -645,9 +603,8 @@ def _extract_tokens_from_auth_data(auth_data: dict, provider: str) -> tuple[Opti
             access_token = None
             refresh_token = None
     else:
-        # Antigravity 的 token 在顶层
-        access_token = auth_data.get("access_token")
-        refresh_token = auth_data.get("refresh_token")
+        access_token = auth_data.get("access_token") or (meta.get("access_token") if meta else None)
+        refresh_token = auth_data.get("refresh_token") or (meta.get("refresh_token") if meta else None)
     
     return access_token, refresh_token, project_id
 
@@ -662,7 +619,7 @@ def get_quota_for_account(auth_data: dict) -> dict:
     - gemini: Gemini CLI 账户（实时配额）
     - codex, claude, qwen, iflow, aistudio, vertex: 静态模型列表（带 token 验证）
     """
-    provider = auth_data.get("type", "").lower()
+    provider = (auth_data.get("type") or auth_data.get("provider") or "").strip().lower()
     
     # 检查是否支持实时配额查询
     if provider not in SUPPORTED_QUOTA_PROVIDERS:
