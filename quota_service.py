@@ -50,7 +50,8 @@ TOKEN_VALIDATION_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow"]
 NO_TOKEN_VALIDATION_PROVIDERS = ["aistudio", "vertex"]
 
 # Antigravity API 返回的模型名称到 CLIProxyAPI 使用的别名映射
-# 参考 CLIProxyAPI/internal/runtime/executor/antigravity_executor.go 的 modelName2Alias 函数
+# 参考 CLIProxyAPI internal/config/oauth_model_alias_migration.go 的 defaultAntigravityAliases
+# 与 antigravity_executor.go 的跳过列表、GetAntigravityModelConfig 保持一致
 ANTIGRAVITY_MODEL_NAME_TO_ALIAS = {
     "rev19-uic3-1p": "gemini-2.5-computer-use-preview-10-2025",
     "gemini-3-pro-image": "gemini-3-pro-image-preview",
@@ -59,9 +60,10 @@ ANTIGRAVITY_MODEL_NAME_TO_ALIAS = {
     "claude-sonnet-4-5": "gemini-claude-sonnet-4-5",
     "claude-sonnet-4-5-thinking": "gemini-claude-sonnet-4-5-thinking",
     "claude-opus-4-5-thinking": "gemini-claude-opus-4-5-thinking",
+    "claude-opus-4-6-thinking": "gemini-claude-opus-4-6-thinking",
 }
 
-# 需要跳过的模型（CLIProxyAPI 中 modelName2Alias 返回空字符串的模型）
+# 需要跳过的模型（与 CLIProxyAPI internal/runtime/executor/antigravity_executor.go 第 1077-1079 行一致）
 ANTIGRAVITY_SKIP_MODELS = {
     "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", 
     "gemini-3-pro-low", "gemini-2.5-pro"
@@ -96,7 +98,7 @@ STATIC_MODEL_LISTS = {
         {"name": "gemini-3-pro-preview", "display_name": "Gemini 3 Pro Preview", "description": "Our most intelligent model with SOTA reasoning"},
         {"name": "gemini-3-flash-preview", "display_name": "Gemini 3 Flash Preview", "description": "Our most intelligent model built for speed"},
     ],
-    # GetOpenAIModels() - 第 531-660 行
+    # GetOpenAIModels() - 与 CLIProxyAPI internal/registry/model_definitions_static_data.go 一致
     "codex": [
         {"name": "gpt-5", "display_name": "GPT 5", "description": "Stable version of GPT 5"},
         {"name": "gpt-5-codex", "display_name": "GPT 5 Codex", "description": "Stable version of GPT 5 Codex"},
@@ -107,11 +109,13 @@ STATIC_MODEL_LISTS = {
         {"name": "gpt-5.1-codex-max", "display_name": "GPT 5.1 Codex Max", "description": "Stable version of GPT 5.1 Codex Max"},
         {"name": "gpt-5.2", "display_name": "GPT 5.2", "description": "Stable version of GPT 5.2"},
         {"name": "gpt-5.2-codex", "display_name": "GPT 5.2 Codex", "description": "Stable version of GPT 5.2 Codex"},
+        {"name": "gpt-5.3-codex", "display_name": "GPT 5.3 Codex", "description": "Stable version of GPT 5.3 Codex"},
     ],
-    # GetClaudeModels() - 第 7-100 行
+    # GetClaudeModels() - 与 CLIProxyAPI internal/registry/model_definitions_static_data.go 一致
     "claude": [
         {"name": "claude-haiku-4-5-20251001", "display_name": "Claude 4.5 Haiku", "description": "Fast and efficient model"},
         {"name": "claude-sonnet-4-5-20250929", "display_name": "Claude 4.5 Sonnet", "description": "Balanced performance model"},
+        {"name": "claude-opus-4-6", "display_name": "Claude 4.6 Opus", "description": "Premium model combining maximum intelligence with practical performance"},
         {"name": "claude-opus-4-5-20251101", "display_name": "Claude 4.5 Opus", "description": "Premium model combining maximum intelligence"},
         {"name": "claude-opus-4-1-20250805", "display_name": "Claude 4.1 Opus", "description": "Claude 4.1 Opus"},
         {"name": "claude-opus-4-20250514", "display_name": "Claude 4 Opus", "description": "Claude 4 Opus"},
@@ -125,7 +129,7 @@ STATIC_MODEL_LISTS = {
         {"name": "qwen3-coder-flash", "display_name": "Qwen3 Coder Flash", "description": "Fast code generation model"},
         {"name": "vision-model", "display_name": "Qwen3 Vision Model", "description": "Vision model"},
     ],
-    # GetIFlowModels() - 第 715-760 行
+    # GetIFlowModels() - 与 CLIProxyAPI internal/registry/model_definitions_static_data.go 一致
     "iflow": [
         {"name": "tstars2.0", "display_name": "TStars-2.0", "description": "iFlow TStars-2.0 multimodal assistant"},
         {"name": "qwen3-coder-plus", "display_name": "Qwen3-Coder-Plus", "description": "Qwen3 Coder Plus code generation"},
@@ -137,8 +141,8 @@ STATIC_MODEL_LISTS = {
         {"name": "glm-4.7", "display_name": "GLM-4.7", "description": "Zhipu GLM 4.7 general model"},
         {"name": "kimi-k2", "display_name": "Kimi-K2", "description": "Moonshot Kimi K2 general model"},
         {"name": "kimi-k2-thinking", "display_name": "Kimi-K2-Thinking", "description": "Moonshot Kimi K2 thinking model"},
-        {"name": "deepseek-v3.2-chat", "display_name": "DeepSeek-V3.2-Chat", "description": "DeepSeek V3.2 Chat"},
-        {"name": "deepseek-v3.2-reasoner", "display_name": "DeepSeek-V3.2-Reasoner", "description": "DeepSeek V3.2 Reasoner"},
+        {"name": "deepseek-v3.2-chat", "display_name": "DeepSeek-V3.2", "description": "DeepSeek V3.2 Chat"},
+        {"name": "deepseek-v3.2-reasoner", "display_name": "DeepSeek-V3.2", "description": "DeepSeek V3.2 Reasoner"},
         {"name": "deepseek-v3.2", "display_name": "DeepSeek-V3.2-Exp", "description": "DeepSeek V3.2 experimental"},
         {"name": "deepseek-v3.1", "display_name": "DeepSeek-V3.1-Terminus", "description": "DeepSeek V3.1 Terminus"},
         {"name": "deepseek-r1", "display_name": "DeepSeek-R1", "description": "DeepSeek reasoning model R1"},
@@ -149,6 +153,8 @@ STATIC_MODEL_LISTS = {
         {"name": "qwen3-235b", "display_name": "Qwen3-235B-A22B", "description": "Qwen3 235B A22B"},
         {"name": "minimax-m2", "display_name": "MiniMax-M2", "description": "MiniMax M2"},
         {"name": "minimax-m2.1", "display_name": "MiniMax-M2.1", "description": "MiniMax M2.1"},
+        {"name": "iflow-rome-30ba3b", "display_name": "iFlow-ROME", "description": "iFlow Rome 30BA3B model"},
+        {"name": "kimi-k2.5", "display_name": "Kimi-K2.5", "description": "Moonshot Kimi K2.5"},
     ],
     # GetAIStudioModels() - 第 375-529 行
     "aistudio": [

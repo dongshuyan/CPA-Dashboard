@@ -148,6 +148,6 @@ ssh -L 51121:localhost:51121 user@server
 
 ## 注意
 
-- 配额查询目前仅支持 Antigravity 类型账户
-- 其他类型账户只显示基本信息
+- 配额查询目前仅支持 Antigravity 类型账户（实时配额 + 模型别名与 CLIProxyAPI 一致）
+- 其他类型账户（Gemini/Codex/Claude/Qwen/iFlow/AI Studio/Vertex）显示静态支持的模型列表，与 CLIProxyAPI `internal/registry/model_definitions_static_data.go` 保持同步
 - 服务控制功能需要正确配置 `CPA_SERVICE_DIR`
