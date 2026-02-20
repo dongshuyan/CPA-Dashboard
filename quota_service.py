@@ -3,8 +3,11 @@
 支持 Antigravity 和 Gemini CLI 类型账户
 新增：支持验证所有 OAuth 账户的 token 有效性
 """
+import base64
+import json
 import requests
 import time
+from datetime import datetime, timezone
 from typing import Optional
 from config import (
     CLOUD_CODE_API_URL,
@@ -49,6 +52,39 @@ TOKEN_VALIDATION_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow"]
 # 不支持 token 验证的账户类型（使用 API Key 或 Service Account）
 NO_TOKEN_VALIDATION_PROVIDERS = ["aistudio", "vertex"]
 
+# Antigravity API 返回的模型名称到 CLIProxyAPI 使用的别名映射
+# 参考 CLIProxyAPI/internal/runtime/executor/antigravity_executor.go 的 modelName2Alias 函数
+ANTIGRAVITY_MODEL_NAME_TO_ALIAS = {
+    "rev19-uic3-1p": "gemini-2.5-computer-use-preview-10-2025",
+    "gemini-3-pro-image": "gemini-3-pro-image-preview",
+    "gemini-3-pro-high": "gemini-3-pro-preview",
+    "gemini-3-flash": "gemini-3-flash-preview",
+    "claude-sonnet-4-5": "gemini-claude-sonnet-4-5",
+    "claude-sonnet-4-5-thinking": "gemini-claude-sonnet-4-5-thinking",
+    "claude-opus-4-5-thinking": "gemini-claude-opus-4-5-thinking",
+}
+
+# 需要跳过的模型（CLIProxyAPI 中 modelName2Alias 返回空字符串的模型）
+ANTIGRAVITY_SKIP_MODELS = {
+    "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", 
+    "gemini-3-pro-low", "gemini-2.5-pro"
+}
+
+
+def antigravity_model_name_to_alias(model_name: str) -> Optional[str]:
+    """
+    将 Antigravity API 返回的模型名称转换为 CLIProxyAPI 使用的别名
+    
+    Args:
+        model_name: Antigravity API 返回的原始模型名称
+        
+    Returns:
+        CLIProxyAPI 使用的模型别名，如果模型应该跳过则返回 None
+    """
+    if model_name in ANTIGRAVITY_SKIP_MODELS:
+        return None
+    return ANTIGRAVITY_MODEL_NAME_TO_ALIAS.get(model_name, model_name)
+
 # 支持显示静态模型列表的 provider 类型（无法获取实时配额，但可以显示支持的模型）
 # Gemini CLI 也使用静态列表
 STATIC_MODELS_PROVIDERS = ["gemini", "codex", "claude", "qwen", "iflow", "aistudio", "vertex"]
@@ -63,7 +99,7 @@ STATIC_MODEL_LISTS = {
         {"name": "gemini-3-pro-preview", "display_name": "Gemini 3 Pro Preview", "description": "Our most intelligent model with SOTA reasoning"},
         {"name": "gemini-3-flash-preview", "display_name": "Gemini 3 Flash Preview", "description": "Our most intelligent model built for speed"},
     ],
-    # GetOpenAIModels() - 与 CLIProxyAPI internal/registry/model_definitions_static_data.go 一致
+    # GetOpenAIModels() - 第 531-660 行
     "codex": [
         {"name": "gpt-5", "display_name": "GPT 5", "description": "Stable version of GPT 5"},
         {"name": "gpt-5-codex", "display_name": "GPT 5 Codex", "description": "Stable version of GPT 5 Codex"},
@@ -74,13 +110,11 @@ STATIC_MODEL_LISTS = {
         {"name": "gpt-5.1-codex-max", "display_name": "GPT 5.1 Codex Max", "description": "Stable version of GPT 5.1 Codex Max"},
         {"name": "gpt-5.2", "display_name": "GPT 5.2", "description": "Stable version of GPT 5.2"},
         {"name": "gpt-5.2-codex", "display_name": "GPT 5.2 Codex", "description": "Stable version of GPT 5.2 Codex"},
-        {"name": "gpt-5.3-codex", "display_name": "GPT 5.3 Codex", "description": "Stable version of GPT 5.3 Codex"},
     ],
-    # GetClaudeModels() - 与 CLIProxyAPI internal/registry/model_definitions_static_data.go 一致
+    # GetClaudeModels() - 第 7-100 行
     "claude": [
         {"name": "claude-haiku-4-5-20251001", "display_name": "Claude 4.5 Haiku", "description": "Fast and efficient model"},
         {"name": "claude-sonnet-4-5-20250929", "display_name": "Claude 4.5 Sonnet", "description": "Balanced performance model"},
-        {"name": "claude-opus-4-6", "display_name": "Claude 4.6 Opus", "description": "Premium model combining maximum intelligence with practical performance"},
         {"name": "claude-opus-4-5-20251101", "display_name": "Claude 4.5 Opus", "description": "Premium model combining maximum intelligence"},
         {"name": "claude-opus-4-1-20250805", "display_name": "Claude 4.1 Opus", "description": "Claude 4.1 Opus"},
         {"name": "claude-opus-4-20250514", "display_name": "Claude 4 Opus", "description": "Claude 4 Opus"},
@@ -94,7 +128,7 @@ STATIC_MODEL_LISTS = {
         {"name": "qwen3-coder-flash", "display_name": "Qwen3 Coder Flash", "description": "Fast code generation model"},
         {"name": "vision-model", "display_name": "Qwen3 Vision Model", "description": "Vision model"},
     ],
-    # GetIFlowModels() - 与 CLIProxyAPI internal/registry/model_definitions_static_data.go 一致
+    # GetIFlowModels() - 第 715-760 行
     "iflow": [
         {"name": "tstars2.0", "display_name": "TStars-2.0", "description": "iFlow TStars-2.0 multimodal assistant"},
         {"name": "qwen3-coder-plus", "display_name": "Qwen3-Coder-Plus", "description": "Qwen3 Coder Plus code generation"},
@@ -106,8 +140,8 @@ STATIC_MODEL_LISTS = {
         {"name": "glm-4.7", "display_name": "GLM-4.7", "description": "Zhipu GLM 4.7 general model"},
         {"name": "kimi-k2", "display_name": "Kimi-K2", "description": "Moonshot Kimi K2 general model"},
         {"name": "kimi-k2-thinking", "display_name": "Kimi-K2-Thinking", "description": "Moonshot Kimi K2 thinking model"},
-        {"name": "deepseek-v3.2-chat", "display_name": "DeepSeek-V3.2", "description": "DeepSeek V3.2 Chat"},
-        {"name": "deepseek-v3.2-reasoner", "display_name": "DeepSeek-V3.2", "description": "DeepSeek V3.2 Reasoner"},
+        {"name": "deepseek-v3.2-chat", "display_name": "DeepSeek-V3.2-Chat", "description": "DeepSeek V3.2 Chat"},
+        {"name": "deepseek-v3.2-reasoner", "display_name": "DeepSeek-V3.2-Reasoner", "description": "DeepSeek V3.2 Reasoner"},
         {"name": "deepseek-v3.2", "display_name": "DeepSeek-V3.2-Exp", "description": "DeepSeek V3.2 experimental"},
         {"name": "deepseek-v3.1", "display_name": "DeepSeek-V3.1-Terminus", "description": "DeepSeek V3.1 Terminus"},
         {"name": "deepseek-r1", "display_name": "DeepSeek-R1", "description": "DeepSeek reasoning model R1"},
@@ -118,8 +152,6 @@ STATIC_MODEL_LISTS = {
         {"name": "qwen3-235b", "display_name": "Qwen3-235B-A22B", "description": "Qwen3 235B A22B"},
         {"name": "minimax-m2", "display_name": "MiniMax-M2", "description": "MiniMax M2"},
         {"name": "minimax-m2.1", "display_name": "MiniMax-M2.1", "description": "MiniMax M2.1"},
-        {"name": "iflow-rome-30ba3b", "display_name": "iFlow-ROME", "description": "iFlow Rome 30BA3B model"},
-        {"name": "kimi-k2.5", "display_name": "Kimi-K2.5", "description": "Moonshot Kimi K2.5"},
     ],
     # GetAIStudioModels() - 第 375-529 行
     "aistudio": [
@@ -257,9 +289,54 @@ def validate_gemini_token(refresh_token: str) -> tuple[bool, str]:
         return False, "error"
 
 
+def _codex_access_token_expired(auth_data: dict) -> bool:
+    """
+    判断 Codex 账户的 access_token 是否已过期（用于无 refresh_token 的账户）。
+    优先使用 auth 文件中的 expired (ISO) 或 exp (Unix)，否则尝试解析 access_token JWT 的 exp。
+    返回 True 表示已过期，False 表示未过期或无法判断（视为未过期以免误报）。
+    """
+    now = time.time()
+    # 1) 使用顶层 expired 字段（ISO 8601，如 "2026-03-01T07:35:45+00:00"）
+    expired_str = auth_data.get("expired") or auth_data.get("expire")
+    if expired_str:
+        try:
+            # 兼容 Z 后缀
+            s = str(expired_str).strip().replace("Z", "+00:00")
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return now >= dt.timestamp()
+        except Exception:
+            pass
+    # 2) 使用顶层 exp 字段（部分 auth 文件会存解码后的 Unix 时间戳）
+    exp_ts = auth_data.get("exp")
+    if isinstance(exp_ts, (int, float)):
+        return now >= exp_ts
+    # 3) 从 access_token JWT 中读取 exp（不校验签名，仅读 payload）
+    access_token = auth_data.get("access_token")
+    if access_token:
+        try:
+            parts = access_token.split(".")
+            if len(parts) >= 2:
+                payload_b64 = parts[1]
+                padding = 4 - len(payload_b64) % 4
+                if padding != 4:
+                    payload_b64 += "=" * padding
+                payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+                exp = payload.get("exp")
+                if isinstance(exp, (int, float)):
+                    return now >= exp
+        except Exception:
+            pass
+    return False
+
+
 def validate_codex_token(refresh_token: str) -> tuple[bool, str]:
     """
-    验证 Codex (OpenAI) 账户的 token 是否有效
+    验证 Codex (OpenAI) 账户的 token 是否有效（通过 refresh_token 调用 OAuth 接口）
+    
+    请求参数需与 CLIProxyAPI 一致：RefreshTokens 会带 scope，否则 OpenAI 可能拒绝刷新。
+    参考: CLIProxyAPI internal/auth/codex/openai_auth.go RefreshTokens()
     
     Returns: (is_valid, token_status)
     """
@@ -269,7 +346,8 @@ def validate_codex_token(refresh_token: str) -> tuple[bool, str]:
             data={
                 "client_id": CODEX_CLIENT_ID,
                 "grant_type": "refresh_token",
-                "refresh_token": refresh_token
+                "refresh_token": refresh_token,
+                "scope": "openid profile email",  # 与 CLIProxyAPI 一致，缺少时 OpenAI 可能返回错误
             },
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -386,7 +464,7 @@ def validate_token_for_provider(auth_data: dict, provider: str) -> tuple[bool, s
         
     Returns: (is_valid, token_status)
         - is_valid: token 是否有效
-        - token_status: 状态字符串 ("refreshed", "refresh_failed", "error", "missing", "not_applicable")
+        - token_status: 状态字符串 ("refreshed", "refresh_failed", "error", "missing", "expired", "valid", "not_applicable")
     """
     provider = provider.lower()
     
@@ -409,6 +487,18 @@ def validate_token_for_provider(auth_data: dict, provider: str) -> tuple[bool, s
     else:
         # 其他类型的 refresh_token 在顶层
         refresh_token = auth_data.get("refresh_token")
+    
+    # Codex 特殊：部分 auth 文件只有 access_token/id_token 和 expired，没有 refresh_token（如其他客户端导出的）
+    # 此时用 expired 或 JWT exp 判断 access_token 是否仍在有效期内
+    if provider == "codex" and not refresh_token:
+        access_token = auth_data.get("access_token")
+        if not access_token:
+            print(f"[Token验证] Codex 账户缺少 refresh_token 和 access_token，auth_data 包含的字段: {list(auth_data.keys())}")
+            return False, "missing"
+        if _codex_access_token_expired(auth_data):
+            print(f"[Token验证] Codex 账户 access_token 已过期（无 refresh_token 无法刷新）")
+            return False, "expired"
+        return True, "valid"
     
     if not refresh_token:
         print(f"[Token验证] {provider} 账户缺少 refresh_token，auth_data 包含的字段: {list(auth_data.keys())}")
@@ -552,21 +642,26 @@ def fetch_quota_with_token(access_token: str, project_id: Optional[str] = None, 
         
         data = resp.json()
         models = data.get("models", {})
-        # 调试：打印 API 返回的模型 key 列表，便于确认是否包含 opus 4.6 等
-        api_model_names = sorted(models.keys()) if models else []
-        print(f"[配额] fetchAvailableModels 返回 {len(api_model_names)} 个模型: {api_model_names}")
         
-        # API 返回的 meta 里有什么模型就显示什么模型，不做别名映射
         for name, info in models.items():
-            name = (name or "").strip()
-            if not name:
+            # 只保留 gemini 和 claude 相关模型
+            if "gemini" not in name.lower() and "claude" not in name.lower():
                 continue
+            
+            # 将 Antigravity API 返回的模型名称转换为 CLIProxyAPI 使用的别名
+            alias_name = antigravity_model_name_to_alias(name)
+            if alias_name is None:
+                # 跳过不支持的模型
+                continue
+            
             quota_info = info.get("quotaInfo", {})
             remaining_fraction = quota_info.get("remainingFraction", 0)
             percentage = int(remaining_fraction * 100)
             reset_time = quota_info.get("resetTime", "")
+            
             result["models"].append({
-                "name": name,
+                "name": alias_name,  # 使用转换后的别名
+                "original_name": name,  # 保留原始名称以便调试
                 "percentage": percentage,
                 "reset_time": reset_time
             })
@@ -585,16 +680,18 @@ def _extract_tokens_from_auth_data(auth_data: dict, provider: str) -> tuple[Opti
     """
     从认证数据中提取 token 信息
     
-    支持两种格式:
-    - 扁平格式（filestore 写入）: {"type": "...", "access_token": "...", "refresh_token": "...", "project_id": "..."}
-    - 嵌套格式（Auth 完整结构）: {"metadata": {"access_token": "...", "refresh_token": "...", "project_id": "..."}}
+    Antigravity 数据结构:
+        {"access_token": "...", "refresh_token": "...", "project_id": "..."}
     
-    Gemini CLI: token 在 "token" 对象中
+    Gemini CLI 数据结构:
+        {"token": {"access_token": "...", "refresh_token": "..."}, "project_id": "..."}
+    
+    返回: (access_token, refresh_token, project_id)
     """
-    meta = auth_data.get("metadata") if isinstance(auth_data.get("metadata"), dict) else {}
-    project_id = auth_data.get("project_id") or (meta.get("project_id") if meta else None)
+    project_id = auth_data.get("project_id")
     
     if provider == "gemini":
+        # Gemini CLI 的 token 在嵌套的 "token" 对象中
         token_data = auth_data.get("token", {})
         if isinstance(token_data, dict):
             access_token = token_data.get("access_token")
@@ -603,8 +700,9 @@ def _extract_tokens_from_auth_data(auth_data: dict, provider: str) -> tuple[Opti
             access_token = None
             refresh_token = None
     else:
-        access_token = auth_data.get("access_token") or (meta.get("access_token") if meta else None)
-        refresh_token = auth_data.get("refresh_token") or (meta.get("refresh_token") if meta else None)
+        # Antigravity 的 token 在顶层
+        access_token = auth_data.get("access_token")
+        refresh_token = auth_data.get("refresh_token")
     
     return access_token, refresh_token, project_id
 
@@ -619,7 +717,7 @@ def get_quota_for_account(auth_data: dict) -> dict:
     - gemini: Gemini CLI 账户（实时配额）
     - codex, claude, qwen, iflow, aistudio, vertex: 静态模型列表（带 token 验证）
     """
-    provider = (auth_data.get("type") or auth_data.get("provider") or "").strip().lower()
+    provider = auth_data.get("type", "").lower()
     
     # 检查是否支持实时配额查询
     if provider not in SUPPORTED_QUOTA_PROVIDERS:

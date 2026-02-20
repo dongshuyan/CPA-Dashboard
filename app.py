@@ -267,6 +267,13 @@ def api_accounts():
             cached = quota_cache[cache_key]
             account["quota"] = cached.get("quota")
             account["subscription_tier"] = cached.get("subscription_tier")
+            
+            # 检查 token 状态，判断是否需要重新登录
+            quota_data = cached.get("quota", {})
+            token_status = quota_data.get("token_status", "") if quota_data else ""
+            # 当 token_status 为 missing/refresh_failed/error/expired 时，标记为需要重新登录
+            if token_status in ("missing", "refresh_failed", "error", "expired"):
+                account["needs_relogin"] = True
         
         accounts.append(account)
     

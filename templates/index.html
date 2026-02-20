@@ -2104,7 +2104,7 @@
             const quota = account.quota;
             if (quota) {
                 const tokenStatus = quota.token_status || '';
-                if (['missing', 'refresh_failed', 'error'].includes(tokenStatus)) {
+                if (['missing', 'refresh_failed', 'error', 'expired'].includes(tokenStatus)) {
                     return true;
                 }
             }
@@ -2314,7 +2314,7 @@
                 account.subscription_tier = data.subscription_tier;
                 // 根据刷新结果更新 needs_relogin 状态
                 const tokenStatus = (data.quota && data.quota.token_status) || '';
-                account.needs_relogin = ['missing', 'refresh_failed', 'error'].includes(tokenStatus);
+                account.needs_relogin = ['missing', 'refresh_failed', 'error', 'expired'].includes(tokenStatus);
             }
 
             const quotaEl = document.getElementById(`quota-${accountId}`);
@@ -2432,7 +2432,7 @@
                         updateAccountUI(account.id, data);
                         // 根据刷新结果更新 needs_relogin 状态
                         const tokenStatus = (data.quota && data.quota.token_status) || '';
-                        account.needs_relogin = ['missing', 'refresh_failed', 'error'].includes(tokenStatus);
+                        account.needs_relogin = ['missing', 'refresh_failed', 'error', 'expired'].includes(tokenStatus);
                         success++;
                     } else {
                         failed++;
