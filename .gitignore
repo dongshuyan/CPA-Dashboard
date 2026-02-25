@@ -43,5 +43,7 @@ quota_cache.json
 
 # 寸止记忆文件夹
 .cunzhi-memory/
-
 .*/
+
+# 示例文件夹
+example/

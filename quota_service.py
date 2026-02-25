@@ -97,6 +97,7 @@ STATIC_MODEL_LISTS = {
         {"name": "gemini-2.5-flash", "display_name": "Gemini 2.5 Flash", "description": "Stable version of Gemini 2.5 Flash, up to 1M tokens"},
         {"name": "gemini-2.5-flash-lite", "display_name": "Gemini 2.5 Flash Lite", "description": "Our smallest and most cost effective model"},
         {"name": "gemini-3-pro-preview", "display_name": "Gemini 3 Pro Preview", "description": "Our most intelligent model with SOTA reasoning"},
+        {"name": "gemini-3.1-pro-preview", "display_name": "Gemini 3.1 Pro Preview", "description": "Gemini 3.1 Pro Preview"},
         {"name": "gemini-3-flash-preview", "display_name": "Gemini 3 Flash Preview", "description": "Our most intelligent model built for speed"},
     ],
     # GetOpenAIModels() - 第 531-660 行
@@ -110,6 +111,8 @@ STATIC_MODEL_LISTS = {
         {"name": "gpt-5.1-codex-max", "display_name": "GPT 5.1 Codex Max", "description": "Stable version of GPT 5.1 Codex Max"},
         {"name": "gpt-5.2", "display_name": "GPT 5.2", "description": "Stable version of GPT 5.2"},
         {"name": "gpt-5.2-codex", "display_name": "GPT 5.2 Codex", "description": "Stable version of GPT 5.2 Codex"},
+        {"name": "gpt-5.3-codex", "display_name": "GPT 5.3 Codex", "description": "Stable version of GPT 5.3 Codex, The best model for coding and agentic tasks across domains."},
+        {"name": "gpt-5.3-codex-spark", "display_name": "GPT 5.3 Codex Spark", "description": "Ultra-fast coding model."},
     ],
     # GetClaudeModels() - 第 7-100 行
     "claude": [
@@ -127,6 +130,7 @@ STATIC_MODEL_LISTS = {
         {"name": "qwen3-coder-plus", "display_name": "Qwen3 Coder Plus", "description": "Advanced code generation and understanding model"},
         {"name": "qwen3-coder-flash", "display_name": "Qwen3 Coder Flash", "description": "Fast code generation model"},
         {"name": "vision-model", "display_name": "Qwen3 Vision Model", "description": "Vision model"},
+        {"name": "coder-model", "display_name": "Qwen 3.5 Plus", "description": "efficient hybrid model with leading coding performance"},
     ],
     # GetIFlowModels() - 第 715-760 行
     "iflow": [
@@ -152,6 +156,10 @@ STATIC_MODEL_LISTS = {
         {"name": "qwen3-235b", "display_name": "Qwen3-235B-A22B", "description": "Qwen3 235B A22B"},
         {"name": "minimax-m2", "display_name": "MiniMax-M2", "description": "MiniMax M2"},
         {"name": "minimax-m2.1", "display_name": "MiniMax-M2.1", "description": "MiniMax M2.1"},
+        {"name": "glm-5", "display_name": "GLM-5", "description": "Zhipu GLM 5 general model"},
+        {"name": "minimax-m2.5", "display_name": "MiniMax-M2.5", "description": "MiniMax M2.5"},
+        {"name": "iflow-rome-30ba3b", "display_name": "iFlow-ROME", "description": "iFlow Rome 30BA3B model"},
+        {"name": "kimi-k2.5", "display_name": "Kimi-K2.5", "description": "Moonshot Kimi K2.5"},
     ],
     # GetAIStudioModels() - 第 375-529 行
     "aistudio": [
@@ -159,6 +167,7 @@ STATIC_MODEL_LISTS = {
         {"name": "gemini-2.5-flash", "display_name": "Gemini 2.5 Flash", "description": "Stable version of Gemini 2.5 Flash"},
         {"name": "gemini-2.5-flash-lite", "display_name": "Gemini 2.5 Flash Lite", "description": "Our smallest and most cost effective model"},
         {"name": "gemini-3-pro-preview", "display_name": "Gemini 3 Pro Preview", "description": "Gemini 3 Pro Preview"},
+        {"name": "gemini-3.1-pro-preview", "display_name": "Gemini 3.1 Pro Preview", "description": "Gemini 3.1 Pro Preview"},
         {"name": "gemini-3-flash-preview", "display_name": "Gemini 3 Flash Preview", "description": "Our most intelligent model built for speed"},
     ],
     # GetGeminiVertexModels() - 第 198-291 行
@@ -167,6 +176,7 @@ STATIC_MODEL_LISTS = {
         {"name": "gemini-2.5-flash", "display_name": "Gemini 2.5 Flash", "description": "Stable version of Gemini 2.5 Flash"},
         {"name": "gemini-2.5-flash-lite", "display_name": "Gemini 2.5 Flash Lite", "description": "Our smallest and most cost effective model"},
         {"name": "gemini-3-pro-preview", "display_name": "Gemini 3 Pro Preview", "description": "Gemini 3 Pro Preview"},
+        {"name": "gemini-3.1-pro-preview", "display_name": "Gemini 3.1 Pro Preview", "description": "Gemini 3.1 Pro Preview"},
         {"name": "gemini-3-flash-preview", "display_name": "Gemini 3 Flash Preview", "description": "Our most intelligent model built for speed"},
         {"name": "gemini-3-pro-image-preview", "display_name": "Gemini 3 Pro Image Preview", "description": "Gemini 3 Pro Image Preview"},
     ],
