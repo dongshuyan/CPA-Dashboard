@@ -108,7 +108,7 @@ python app.py
 
 ![登录账户1](pics/登录账户1.png)
 
-选择 Provider 后启动 OAuth，复制链接在浏览器中完成认证；部分流程需在终端按提示输入（如项目 ID、回调 URL 等）。
+选择 Provider（共 7 个：Antigravity、Gemini CLI、Codex、Claude、Qwen、iFlow、Kimi）后启动 OAuth。认证链接会出现在「认证链接」框或命令行输出中，复制到浏览器打开即可；Qwen、Kimi 为设备码流程，链接会自动填入上方认证链接框。部分流程需在终端按提示输入（如项目 ID、回调 URL 等）。
 
 ![登录账户2](pics/登录账户2.png)
 

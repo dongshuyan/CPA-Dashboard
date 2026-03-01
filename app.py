@@ -598,11 +598,14 @@ class InteractiveOAuthSession:
             "saved to",                                # 保存成功的通用标志
         ]
         
-        # OAuth URL 域名列表
+        # OAuth URL 域名列表（用于从命令行输出中识别并提取认证链接，填入「认证链接」框）
+        # Kimi / Qwen 等使用设备码流程，链接格式为 authorize?user_code=xxx，也需在此列出域名
         oauth_domains = [
             "accounts.google.com",
             "console.anthropic.com",
             "auth.openai.com",
+            "qwen.ai",            # Qwen 设备码：https://chat.qwen.ai/authorize?user_code=xxx&client=qwen-code
+            "kimi.com",           # Kimi 设备码：https://www.kimi.com/code/authorize_device?user_code=xxx
             "oauth",
             "login",
             "auth0.com"
