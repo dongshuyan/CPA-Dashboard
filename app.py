@@ -1267,7 +1267,9 @@ def api_service_start():
     
     try:
         log_file = CPA_LOG_FILE or os.path.join(CPA_SERVICE_DIR, "cliproxyapi.log")
-        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        log_dir = os.path.dirname(log_file)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
 
         log_handle = open(log_file, "ab")
         creation_flags = 0
