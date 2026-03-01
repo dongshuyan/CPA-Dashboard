@@ -1,0 +1,3194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIProxyAPI 控制面板</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-hover: #242430;
+            --bg-input: #0f0f16;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9090a8;
+            --text-muted: #606078;
+            --accent-cyan: #00d4ff;
+            --accent-blue: #4f8cff;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --border-color: #2a2a3a;
+            --border-focus: #4f8cff;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --glow-cyan: 0 0 20px rgba(0, 212, 255, 0.3);
+            --glow-green: 0 0 20px rgba(16, 185, 129, 0.3);
+            --glow-red: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(ellipse at top, rgba(79, 140, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: var(--glow-cyan);
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.35rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-tab {
+            padding: 0.6rem 1.25rem;
+            background: transparent;
+            border: none;
+            border-radius: 7px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+
+        .nav-tab.active {
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 2px 10px rgba(79, 140, 255, 0.3);
+        }
+
+        .nav-tab .icon {
+            font-size: 1rem;
+        }
+
+        /* Page Content */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #6366f1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(79, 140, 255, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #059669);
+            color: white;
+        }
+
+        .btn-success:hover {
+            box-shadow: var(--glow-green);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--accent-red), #dc2626);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            box-shadow: var(--glow-red);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .btn-lg {
+            padding: 0.85rem 1.75rem;
+            font-size: 0.95rem;
+        }
+
+        /* Service Control Page */
+        .service-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .service-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-title .icon {
+            font-size: 1.1rem;
+        }
+
+        .panel-body {
+            padding: 1.25rem;
+        }
+
+        /* Status Display */
+        .status-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-input);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .status-indicator.running {
+            background: rgba(16, 185, 129, 0.15);
+            box-shadow: var(--glow-green);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.stopped {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-info h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .status-info h3.running { color: var(--accent-green); }
+        .status-info h3.stopped { color: var(--accent-red); }
+
+        .status-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .status-meta {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .status-meta-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-meta-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-meta-item .label {
+            color: var(--text-muted);
+        }
+
+        .status-meta-item .value {
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Control Buttons */
+        .control-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Log Viewer */
+        .log-panel {
+            grid-column: 1 / -1;
+        }
+
+        .log-container {
+            background: var(--bg-input);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .log-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .log-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .log-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .log-toolbar-right {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .log-content {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-secondary);
+        }
+
+        .log-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-content::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .log-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .log-content::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Log highlighting */
+        .log-line { padding: 1px 0; }
+        .log-error { color: #f87171; }
+        .log-warn { color: #fbbf24; }
+        .log-info { color: #60a5fa; }
+        .log-success { color: #4ade80; }
+        .log-time { color: var(--text-muted); }
+
+        /* Auto refresh toggle */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            background: var(--bg-primary);
+            border-radius: 11px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .toggle.active {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+        }
+
+        .toggle.active::after {
+            left: 20px;
+        }
+
+        .toggle-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* ================ Accounts Page Styles ================ */
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .progress-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .progress-info.active {
+            color: var(--accent-cyan);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 1.1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card h3 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-card .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.45rem 0.9rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .filter-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .filter-btn .count {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            margin-left: 0.4rem;
+        }
+
+        .filter-btn-relogin {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .filter-btn-relogin:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+
+        .filter-btn-relogin.active {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+        }
+
+        .filter-state-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .state-filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .state-filter-toggle:hover {
+            color: #f87171;
+        }
+
+        .state-filter-toggle .count {
+            background: rgba(239, 68, 68, 0.2);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            color: #f87171;
+        }
+
+        .accounts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1rem;
+        }
+
+        .account-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .account-card:hover {
+            border-color: var(--accent-blue);
+            box-shadow: var(--shadow);
+        }
+
+        .account-card.refreshing {
+            opacity: 0.7;
+        }
+
+        .account-card.refreshed {
+            animation: cardFlash 0.5s ease;
+        }
+
+        @keyframes cardFlash {
+            0% { border-color: var(--accent-green); box-shadow: var(--glow-green); }
+            100% { border-color: var(--border-color); box-shadow: none; }
+        }
+
+        .account-card.needs-relogin {
+            border-color: rgba(239, 68, 68, 0.5);
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(239, 68, 68, 0.05) 100%);
+        }
+
+        .account-card.needs-relogin:hover {
+            border-color: #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+        }
+
+        .account-card.needs-relogin .status-badge {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .account-card.needs-relogin .status-dot {
+            background: #ef4444;
+        }
+
+        .relogin-warning {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #f87171;
+            font-size: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .account-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .account-email {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .account-type {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .provider-badge {
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .provider-antigravity { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .provider-gemini { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .provider-claude { background: rgba(249, 115, 22, 0.2); color: #fb923c; }
+        .provider-codex { background: rgba(79, 140, 255, 0.2); color: #93c5fd; }
+        .provider-qwen { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .provider-iflow { background: rgba(20, 184, 166, 0.2); color: #5eead4; }
+        .provider-vertex { background: rgba(251, 191, 36, 0.2); color: #fcd34d; }
+
+        .tier-badge {
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .tier-ultra {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+        }
+
+        .tier-pro {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .tier-free {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+        }
+
+        .tier-unknown {
+            background: var(--bg-hover);
+            color: var(--text-muted);
+        }
+
+        .quota-section {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .quota-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+        }
+
+        .quota-header h4 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .refresh-btn {
+            padding: 0.35rem 0.7rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-family: inherit;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .refresh-btn.loading {
+            pointer-events: none;
+        }
+
+        .refresh-btn.loading .icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .quota-models {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .quota-model {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .model-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 130px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .quota-bar-container {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .quota-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .quota-bar.high { background: linear-gradient(90deg, #10b981, #34d399); }
+        .quota-bar.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .quota-bar.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        .quota-value {
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .quota-value.high { color: #34d399; }
+        .quota-value.medium { color: #fbbf24; }
+        .quota-value.low { color: #f87171; }
+
+        .reset-time {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.7rem;
+            min-width: 65px;
+        }
+
+        .reset-time.soon { color: #34d399; }
+        .reset-time.waiting { color: #fbbf24; }
+        .reset-time.long { color: var(--text-muted); }
+
+        .no-quota {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+        }
+
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-disabled { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .status-error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        .token-status {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            margin-left: 0.4rem;
+        }
+        .token-refreshed { background: rgba(251, 191, 36, 0.2); color: #fcd34d; }
+
+        .status-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Account actions */
+        .account-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .delete-btn {
+            padding: 0.35rem 0.5rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0.6;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            opacity: 1;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+            overflow-y: auto;
+            max-height: calc(90vh - 140px);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        /* Provider buttons */
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .provider-btn {
+            padding: 1rem;
+            background: var(--bg-input);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .provider-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .provider-btn.selected {
+            background: rgba(79, 140, 255, 0.1);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(79, 140, 255, 0.2);
+        }
+
+        .provider-btn .provider-icon {
+            font-size: 1.5rem;
+        }
+
+        .provider-btn .provider-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Auth URL section */
+        .auth-url-section {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-input);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .auth-url-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auth-url-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .auth-url-container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .auth-url-input {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .auth-url-copy-btn {
+            padding: 0.75rem 1rem;
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        .auth-url-copy-btn:hover {
+            background: #3b7ff5;
+        }
+
+        .auth-url-copy-btn.copied {
+            background: var(--accent-green);
+        }
+
+        /* Auth status */
+        .auth-status {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-status.waiting {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+        }
+
+        .auth-status.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .auth-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .auth-status .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Confirm dialog */
+        .confirm-dialog {
+            text-align: center;
+        }
+
+        .confirm-dialog .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .confirm-dialog h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-dialog p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-dialog .account-name {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-cyan);
+            background: var(--bg-input);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.9rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .toast.success { border-color: var(--accent-green); }
+        .toast.error { border-color: var(--accent-red); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        /* Usage Guide Page Styles */
+        .usage-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .usage-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .usage-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .connection-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            background: var(--bg-input);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 0.3rem 0.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+        }
+
+        .copy-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .copy-btn.copied {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: white;
+        }
+
+        .keys-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .key-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: var(--bg-input);
+            border-radius: 6px;
+        }
+
+        .key-item code {
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .code-block {
+            background: var(--bg-input);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-secondary);
+            margin: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-block::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .code-block::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        .code-block::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .accounts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .log-content {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <div class="logo-text">
+                    <h1>CLIProxyAPI</h1>
+                    <p>Control Panel</p>
+                </div>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-page="service">
+                    <span class="icon">🖥️</span>
+                    服务控制
+                </button>
+                <button class="nav-tab" data-page="accounts">
+                    <span class="icon">👤</span>
+                    账户管理
+                </button>
+                <button class="nav-tab" data-page="usage">
+                    <span class="icon">📖</span>
+                    使用说明
+                </button>
+            </nav>
+        </header>
+
+        <!-- Service Control Page -->
+        <div class="page active" id="page-service">
+            <div class="service-grid">
+                <!-- Status Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">📊</span>
+                            服务状态
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="refreshStatus()">
+                            <span>🔄</span> 刷新
+                        </button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="status-display">
+                            <div class="status-indicator stopped" id="statusIndicator">
+                                <span id="statusIcon">⏹️</span>
+                            </div>
+                            <div class="status-info">
+                                <h3 class="stopped" id="statusText">检查中...</h3>
+                                <p id="statusSubtext">正在获取服务状态</p>
+                            </div>
+                        </div>
+                        <div class="status-meta" id="statusMeta">
+                            <div class="status-meta-item">
+                                <span class="label">进程 PID</span>
+                                <span class="value" id="metaPid">-</span>
+                            </div>
+                            <div class="status-meta-item">
+                                <span class="label">服务目录</span>
+                                <span class="value" id="metaDir">-</span>
+                            </div>
+                            <div class="status-meta-item">
+                                <span class="label">日志文件</span>
+                                <span class="value" id="metaLog">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🎛️</span>
+                            服务控制
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.25rem;">
+                            通过下方按钮控制 CLIProxyAPI 服务的运行状态
+                        </p>
+                        <div class="control-buttons">
+                            <button class="btn btn-success btn-lg" id="btnStart" onclick="startService()">
+                                <span>▶️</span> 启动服务
+                            </button>
+                            <button class="btn btn-danger btn-lg" id="btnStop" onclick="stopService()">
+                                <span>⏹️</span> 停止服务
+                            </button>
+                            <button class="btn btn-secondary btn-lg" id="btnRestart" onclick="restartService()">
+                                <span>🔄</span> 重启服务
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Panel -->
+                <div class="panel log-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">📜</span>
+                            运行日志
+                        </div>
+                        <div class="log-toolbar-right">
+                            <div class="toggle-wrapper">
+                                <span class="toggle-label">自动刷新</span>
+                                <div class="toggle" id="autoRefreshToggle" onclick="toggleAutoRefresh()"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="log-container">
+                        <div class="log-toolbar">
+                            <div class="log-toolbar-left">
+                                <span class="log-meta" id="logMeta">日志大小: - | 行数: -</span>
+                            </div>
+                            <div class="log-toolbar-right">
+                                <button class="btn btn-ghost btn-sm" onclick="refreshLogs()">
+                                    <span>🔄</span> 刷新
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="scrollLogToBottom()">
+                                    <span>⬇️</span> 底部
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="clearLogs()">
+                                    <span>🗑️</span> 清除日志
+                                </button>
+                            </div>
+                        </div>
+                        <div class="log-content" id="logContent">
+                            正在加载日志...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accounts Page -->
+        <div class="page" id="page-accounts">
+            <div class="actions" style="margin-bottom: 1.25rem; justify-content: flex-end;">
+                <span class="progress-info" id="progressInfo"></span>
+                <button class="btn btn-success" onclick="showAddAccountModal()">
+                    <span>➕</span> 添加账户
+                </button>
+                <button class="btn btn-secondary" onclick="loadAccounts()">
+                    <span>🔄</span> 刷新列表
+                </button>
+                <button class="btn btn-primary" id="refreshAllBtn" onclick="refreshAllQuotas()">
+                    <span>📊</span> 刷新所有配额
+                </button>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <h3>总账户数</h3>
+                    <div class="value" id="totalCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Antigravity</h3>
+                    <div class="value" id="antigravityCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>ULTRA 会员</h3>
+                    <div class="value" id="ultraCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>PRO 会员</h3>
+                    <div class="value" id="proCount">-</div>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="all">
+                    全部 <span class="count" id="filterAllCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="antigravity">
+                    Antigravity <span class="count" id="filterAntigravityCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="gemini">
+                    Gemini <span class="count" id="filterGeminiCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="claude">
+                    Claude <span class="count" id="filterClaudeCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="codex">
+                    Codex <span class="count" id="filterCodexCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="ultra">
+                    ULTRA <span class="count" id="filterUltraCount">0</span>
+                </button>
+                <button class="filter-btn" data-filter="pro">
+                    PRO <span class="count" id="filterProCount">0</span>
+                </button>
+            </div>
+            <div class="filter-state-bar">
+                <label class="state-filter-toggle">
+                    <input type="checkbox" id="stateFilterNeedsRelogin" onchange="toggleStateFilterRelogin()">
+                    <span class="toggle-label">⚠️ 仅显示需要重新登录的账户</span>
+                    <span class="count" id="stateFilterNeedsReloginCount">0</span>
+                </label>
+                <button class="btn btn-danger btn-sm" id="bulkDeleteReloginBtn" onclick="showBulkDeleteReloginConfirm()" style="display: none;">
+                    <span>🗑️</span> 批量删除需要重新登录的账户 (<span id="bulkDeleteReloginCount">0</span>)
+                </button>
+            </div>
+
+            <div class="accounts-grid" id="accountsGrid">
+                <div class="empty-state">
+                    <div class="icon">📭</div>
+                    <p>正在加载账户...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Guide Page -->
+        <div class="page" id="page-usage">
+            <div class="usage-header">
+                <h2>API 使用说明</h2>
+                <p>CLIProxyAPI 提供 OpenAI 兼容的 API 接口，支持多种模型</p>
+            </div>
+
+            <!-- Connection Info -->
+            <div class="panel" style="margin-bottom: 1.5rem;">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="icon">🔗</span>
+                        连接信息
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="loadUsageGuide()">
+                        <span>🔄</span> 刷新
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <div class="connection-info">
+                        <div class="info-item">
+                            <span class="info-label">Base URL</span>
+                            <div class="info-value-wrapper">
+                                <code class="info-value" id="baseUrl">-</code>
+                                <button class="copy-btn" onclick="copyToClipboard(document.getElementById('baseUrl').textContent)">📋</button>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">API Key</span>
+                            <div class="info-value-wrapper">
+                                <code class="info-value" id="apiKey">-</code>
+                                <button class="copy-btn" onclick="copyToClipboard(document.getElementById('apiKey').textContent)">📋</button>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">可用 Keys</span>
+                            <span class="info-value" id="apiKeysCount">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- All API Keys -->
+                    <div class="all-keys-section" id="allKeysSection" style="display: none; margin-top: 1rem;">
+                        <div class="info-label" style="margin-bottom: 0.5rem;">所有 API Keys</div>
+                        <div class="keys-list" id="allKeysList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Examples -->
+            <div class="examples-grid">
+                <!-- Curl Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">💻</span>
+                            cURL 命令
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('curlExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="curlExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Curl Stream Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🌊</span>
+                            cURL 流式响应
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('curlStreamExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="curlStreamExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Python Requests Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🐍</span>
+                            Python (requests)
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('pythonRequestsExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="pythonRequestsExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Python OpenAI SDK Example -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🤖</span>
+                            Python (OpenAI SDK)
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('pythonOpenaiExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="pythonOpenaiExample">加载中...</pre>
+                    </div>
+                </div>
+
+                <!-- Python Stream Example -->
+                <div class="panel" style="grid-column: 1 / -1;">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span class="icon">🌊</span>
+                            Python 流式响应 (OpenAI SDK)
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard(document.getElementById('pythonStreamExample').textContent)">📋 复制</button>
+                    </div>
+                    <div class="panel-body">
+                        <pre class="code-block" id="pythonStreamExample">加载中...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div class="modal-overlay" id="addAccountModal" style="display: none;">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>➕</span>
+                    添加账户
+                </div>
+                <button class="modal-close" onclick="closeAddAccountModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                    选择要添加的账户类型，点击后将启动认证流程
+                </p>
+                
+                <div class="provider-grid">
+                    <button class="provider-btn" data-provider="antigravity" onclick="selectProvider('antigravity')">
+                        <span class="provider-icon">🚀</span>
+                        <span class="provider-name">Antigravity</span>
+                    </button>
+                    <button class="provider-btn" data-provider="gemini" onclick="selectProvider('gemini')">
+                        <span class="provider-icon">✨</span>
+                        <span class="provider-name">Gemini CLI</span>
+                    </button>
+                    <button class="provider-btn" data-provider="codex" onclick="selectProvider('codex')">
+                        <span class="provider-icon">🤖</span>
+                        <span class="provider-name">Codex (OpenAI)</span>
+                    </button>
+                    <button class="provider-btn" data-provider="claude" onclick="selectProvider('claude')">
+                        <span class="provider-icon">🧠</span>
+                        <span class="provider-name">Claude</span>
+                    </button>
+                    <button class="provider-btn" data-provider="qwen" onclick="selectProvider('qwen')">
+                        <span class="provider-icon">🔮</span>
+                        <span class="provider-name">Qwen</span>
+                    </button>
+                    <button class="provider-btn" data-provider="iflow" onclick="selectProvider('iflow')">
+                        <span class="provider-icon">🌊</span>
+                        <span class="provider-name">iFlow</span>
+                    </button>
+                    <button class="provider-btn" data-provider="kimi" onclick="selectProvider('kimi')">
+                        <span class="provider-icon">🟫</span>
+                        <span class="provider-name">Kimi (Moonshot)</span>
+                    </button>
+                </div>
+
+                <div class="auth-url-section" id="authUrlSection">
+                    <div class="auth-url-label">认证链接（复制后在浏览器中打开）</div>
+                    <div class="auth-url-container">
+                        <div class="auth-url-input" id="authUrlInput">-</div>
+                        <button class="auth-url-copy-btn" id="authUrlCopyBtn" onclick="copyAuthUrl()">
+                            📋 复制
+                        </button>
+                    </div>
+                    <div class="auth-hint" id="authHint" style="display: none; margin-top: 0.75rem; padding: 0.75rem; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 8px; font-size: 0.75rem; color: #fbbf24;">
+                        <strong>💡 远程服务器提示:</strong><br>
+                        <span id="authHintText"></span>
+                    </div>
+                    
+                    <!-- 命令行输出显示区域 -->
+                    <div class="cli-output-section" id="cliOutputSection" style="display: none; margin-top: 1rem;">
+                        <div class="cli-output-label" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                            命令行输出
+                            <button class="btn btn-ghost btn-sm" onclick="refreshCliOutput()" style="margin-left: 0.5rem; padding: 0.2rem 0.5rem;">🔄</button>
+                        </div>
+                        <div class="cli-output-container" id="cliOutputContainer" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; max-height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all;">
+                            等待输出...
+                        </div>
+                    </div>
+                    
+                    <!-- 用户输入区域 -->
+                    <div class="user-input-section" id="userInputSection" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px;">
+                        <div class="user-input-label" id="userInputLabel" style="font-size: 0.9rem; color: var(--accent-orange); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <span>⌨️</span>
+                            <span>需要您输入信息</span>
+                        </div>
+                        <div id="userInputPromptDetail" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-input); border-radius: 6px;">
+                            请查看上方命令行输出，按提示输入相应内容
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="userInputField" placeholder="在此输入后按 Enter 或点击发送" 
+                                style="flex: 1; padding: 0.75rem; background: var(--bg-primary); border: 2px solid var(--accent-orange); border-radius: 8px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;"
+                                onkeydown="if(event.key==='Enter') sendUserInput()">
+                            <button class="btn btn-primary" onclick="sendUserInput()" id="sendInputBtn" style="background: var(--accent-orange); min-width: 80px;">
+                                发送
+                            </button>
+                        </div>
+                        <div id="userInputHint" style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted);">
+                            💡 提示：<span id="userInputHintText">Gemini CLI 登录时输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 可以激活所有项目；Antigravity 需要粘贴浏览器中的回调 URL</span>
+                        </div>
+                    </div>
+                    
+                    <div class="auth-status waiting" id="authStatus" style="display: none;">
+                        <div class="spinner"></div>
+                        <span id="authStatusText">等待认证完成...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeAddAccountModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal-overlay" id="deleteConfirmModal" style="display: none;">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>⚠️</span>
+                    确认删除
+                </div>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-dialog">
+                    <div class="icon">🗑️</div>
+                    <h3>确定要删除此账户吗？</h3>
+                    <p>账户: <span class="account-name" id="deleteAccountName">-</span></p>
+                    <p style="color: var(--accent-red); font-size: 0.8rem;">此操作不可恢复</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeDeleteModal()">取消</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDeleteAccount()">
+                    <span>🗑️</span> 确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Delete Needs-Re-login Confirm Modal -->
+    <div class="modal-overlay" id="bulkDeleteReloginModal" style="display: none;">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>⚠️</span>
+                    批量删除需要重新登录的账户
+                </div>
+                <button class="modal-close" onclick="closeBulkDeleteReloginModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="confirm-dialog">
+                    <div class="icon">🗑️</div>
+                    <h3>确定要删除当前列表中的 <span id="bulkDeleteReloginModalCount">0</span> 个需要重新登录的账户吗？</h3>
+                    <p style="color: var(--accent-red); font-size: 0.85rem;">此操作不可恢复，请确认后再执行。</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeBulkDeleteReloginModal()">取消</button>
+                <button class="btn btn-danger" id="confirmBulkDeleteReloginBtn" onclick="executeBulkDeleteRelogin()">
+                    <span>🗑️</span> 确定删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Global State ====================
+        let accounts = [];
+        let currentFilter = 'all';
+        let stateFilterRelogin = false;
+        let autoRefreshEnabled = false;
+        let autoRefreshInterval = null;
+        const CONCURRENCY = 4;
+
+        // ==================== Navigation ====================
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const pageId = `page-${tab.dataset.page}`;
+                document.getElementById(pageId).classList.add('active');
+
+                // Load data for the page
+                if (tab.dataset.page === 'service') {
+                    refreshStatus();
+                    refreshLogs();
+                } else if (tab.dataset.page === 'accounts') {
+                    if (accounts.length === 0) {
+                        loadAccounts();
+                    }
+                } else if (tab.dataset.page === 'usage') {
+                    if (!usageGuideData) {
+                        loadUsageGuide();
+                    }
+                }
+            });
+        });
+
+        // ==================== Service Control ====================
+        async function refreshStatus() {
+            try {
+                const resp = await fetch('/api/service/status');
+                const data = await resp.json();
+                updateStatusUI(data);
+            } catch (error) {
+                console.error('获取状态失败:', error);
+                showToast('获取服务状态失败', 'error');
+            }
+        }
+
+        function updateStatusUI(data) {
+            const indicator = document.getElementById('statusIndicator');
+            const icon = document.getElementById('statusIcon');
+            const text = document.getElementById('statusText');
+            const subtext = document.getElementById('statusSubtext');
+            const btnStart = document.getElementById('btnStart');
+            const btnStop = document.getElementById('btnStop');
+
+            if (data.running) {
+                indicator.className = 'status-indicator running';
+                icon.textContent = '✅';
+                text.className = 'running';
+                text.textContent = '服务运行中';
+                subtext.textContent = `${data.count} 个进程正在运行`;
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+            } else {
+                indicator.className = 'status-indicator stopped';
+                icon.textContent = '⏹️';
+                text.className = 'stopped';
+                text.textContent = '服务已停止';
+                subtext.textContent = data.configured ? '服务未运行' : '服务目录未配置';
+                btnStart.disabled = !data.configured;
+                btnStop.disabled = true;
+            }
+
+            // Update meta info
+            document.getElementById('metaPid').textContent = data.pids?.join(', ') || '-';
+            document.getElementById('metaDir').textContent = data.service_dir || '-';
+            document.getElementById('metaLog').textContent = data.log_file || '-';
+        }
+
+        async function startService() {
+            const btn = document.getElementById('btnStart');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 启动中...';
+
+            try {
+                const resp = await fetch('/api/service/start', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('服务启动成功', 'success');
+                } else {
+                    showToast(data.message || data.error || '启动失败', 'error');
+                }
+            } catch (error) {
+                showToast('启动服务失败: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = '<span>▶️</span> 启动服务';
+                refreshStatus();
+            }
+        }
+
+        async function stopService() {
+            const btn = document.getElementById('btnStop');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 停止中...';
+
+            try {
+                const resp = await fetch('/api/service/stop', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('服务已停止', 'success');
+                } else {
+                    showToast(data.message || data.error || '停止失败', 'error');
+                }
+            } catch (error) {
+                showToast('停止服务失败: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = '<span>⏹️</span> 停止服务';
+                refreshStatus();
+            }
+        }
+
+        async function restartService() {
+            const btn = document.getElementById('btnRestart');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 重启中...';
+
+            try {
+                const resp = await fetch('/api/service/restart', { method: 'POST' });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('服务重启成功', 'success');
+                } else {
+                    showToast('重启失败', 'error');
+                }
+            } catch (error) {
+                showToast('重启服务失败: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔄</span> 重启服务';
+                refreshStatus();
+            }
+        }
+
+        // ==================== Log Viewer ====================
+        async function refreshLogs() {
+            try {
+                const resp = await fetch('/api/logs?lines=500');
+                const data = await resp.json();
+
+                if (data.error) {
+                    document.getElementById('logContent').textContent = `错误: ${data.error}`;
+                    return;
+                }
+
+                if (!data.exists) {
+                    document.getElementById('logContent').textContent = '日志文件不存在';
+                    document.getElementById('logMeta').textContent = '日志文件不存在';
+                    return;
+                }
+
+                const logContent = document.getElementById('logContent');
+                logContent.innerHTML = highlightLog(data.content || '(空日志)');
+                
+                document.getElementById('logMeta').textContent = 
+                    `日志大小: ${data.size_human || '-'} | 总行数: ${data.total_lines || 0}`;
+
+                // Auto scroll to bottom if near bottom
+                if (logContent.scrollHeight - logContent.scrollTop < logContent.clientHeight + 100) {
+                    scrollLogToBottom();
+                }
+            } catch (error) {
+                document.getElementById('logContent').textContent = `加载日志失败: ${error.message}`;
+            }
+        }
+
+        function highlightLog(content) {
+            if (!content) return '';
+            
+            return content.split('\n').map(line => {
+                let className = 'log-line';
+                
+                // Highlight by log level
+                if (/\berror\b/i.test(line) || /\bfatal\b/i.test(line) || /\bpanic\b/i.test(line)) {
+                    className += ' log-error';
+                } else if (/\bwarn(ing)?\b/i.test(line)) {
+                    className += ' log-warn';
+                } else if (/\binfo\b/i.test(line)) {
+                    className += ' log-info';
+                } else if (/\bsuccess\b/i.test(line) || /\bstarted\b/i.test(line)) {
+                    className += ' log-success';
+                }
+
+                // Escape HTML
+                const escaped = line
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                return `<div class="${className}">${escaped}</div>`;
+            }).join('');
+        }
+
+        function scrollLogToBottom() {
+            const logContent = document.getElementById('logContent');
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        async function clearLogs() {
+            if (!confirm('确定要清除日志吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/logs/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backup: false })
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    showToast('日志已清除', 'success');
+                    refreshLogs();
+                } else {
+                    showToast(data.error || '清除失败', 'error');
+                }
+            } catch (error) {
+                showToast('清除日志失败: ' + error.message, 'error');
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const toggle = document.getElementById('autoRefreshToggle');
+            autoRefreshEnabled = !autoRefreshEnabled;
+
+            if (autoRefreshEnabled) {
+                toggle.classList.add('active');
+                autoRefreshInterval = setInterval(() => {
+                    refreshLogs();
+                    refreshStatus();
+                }, 3000);
+            } else {
+                toggle.classList.remove('active');
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+
+        // ==================== Accounts ====================
+        async function loadAccounts() {
+            try {
+                const resp = await fetch('/api/accounts');
+                const data = await resp.json();
+                accounts = data.accounts || [];
+                updateStats();
+                renderAccounts();
+            } catch (error) {
+                console.error('加载账户失败:', error);
+                showToast('加载账户失败', 'error');
+            }
+        }
+
+        function updateStats() {
+            const total = accounts.length;
+            const antigravity = accounts.filter(a => a.type === 'antigravity').length;
+            const ultra = accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('ultra')).length;
+            const pro = accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('pro')).length;
+            const needsRelogin = accounts.filter(a => checkNeedsRelogin(a)).length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('antigravityCount').textContent = antigravity;
+            document.getElementById('ultraCount').textContent = ultra;
+            document.getElementById('proCount').textContent = pro;
+
+            document.getElementById('filterAllCount').textContent = total;
+            document.getElementById('filterAntigravityCount').textContent = antigravity;
+            document.getElementById('filterGeminiCount').textContent = accounts.filter(a => a.type === 'gemini').length;
+            document.getElementById('filterClaudeCount').textContent = accounts.filter(a => a.type === 'claude').length;
+            document.getElementById('filterCodexCount').textContent = accounts.filter(a => a.type === 'codex').length;
+            document.getElementById('filterUltraCount').textContent = ultra;
+            document.getElementById('filterProCount').textContent = pro;
+            document.getElementById('stateFilterNeedsReloginCount').textContent = needsRelogin;
+            const reloginInView = getFilteredAccounts().filter(a => checkNeedsRelogin(a)).length;
+            document.getElementById('bulkDeleteReloginCount').textContent = reloginInView;
+            const bulkBtn = document.getElementById('bulkDeleteReloginBtn');
+            if (bulkBtn) bulkBtn.style.display = (stateFilterRelogin && reloginInView > 0) ? 'inline-flex' : 'none';
+        }
+
+        // 检查账户是否需要重新登录（含 Codex Models API 返回的 invalid）
+        function checkNeedsRelogin(account) {
+            if (account.needs_relogin) return true;
+            const quota = account.quota;
+            if (quota) {
+                const tokenStatus = quota.token_status || '';
+                if (['missing', 'refresh_failed', 'error', 'expired', 'invalid'].includes(tokenStatus)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getFilteredAccounts() {
+            let list = accounts;
+            if (currentFilter === 'ultra') {
+                list = accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('ultra'));
+            } else if (currentFilter === 'pro') {
+                list = accounts.filter(a => (a.subscription_tier || '').toLowerCase().includes('pro'));
+            } else if (currentFilter !== 'all') {
+                list = accounts.filter(a => a.type === currentFilter);
+            }
+            if (stateFilterRelogin) {
+                list = list.filter(a => checkNeedsRelogin(a));
+            }
+            return list;
+        }
+
+        function filterAccounts() {
+            return getFilteredAccounts();
+        }
+
+        function toggleStateFilterRelogin() {
+            const cb = document.getElementById('stateFilterNeedsRelogin');
+            stateFilterRelogin = cb ? cb.checked : false;
+            updateStats();
+            renderAccounts();
+        }
+
+        function renderAccounts() {
+            const grid = document.getElementById('accountsGrid');
+            const filtered = filterAccounts();
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>没有找到账户</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(account => renderAccountCard(account)).join('');
+        }
+
+        function renderAccountCard(account) {
+            const tierClass = getTierClass(account.subscription_tier);
+            const tierName = getTierName(account.subscription_tier);
+            const providerClass = `provider-${account.type}`;
+            const needsRelogin = checkNeedsRelogin(account);
+            const statusClass = account.disabled ? 'status-disabled' : (needsRelogin ? 'status-error' : 'status-active');
+            const statusText = account.disabled ? '已禁用' : (needsRelogin ? '需要重新登录' : '活跃');
+            const accountName = account.name || account.id;
+            const cardClass = needsRelogin ? 'account-card needs-relogin' : 'account-card';
+
+            // 需要重新登录的警告提示
+            const reloginWarning = needsRelogin ? `
+                <div class="relogin-warning">
+                    <span>⚠️</span>
+                    <span>登录信息已失效，请重新登录以继续使用</span>
+                </div>
+            ` : '';
+
+            return `
+                <div class="${cardClass}" data-id="${account.id}" id="card-${account.id}">
+                    <div class="account-header">
+                        <div class="account-info">
+                            <div class="account-email">${account.email || account.name || '未知'}</div>
+                            <div class="account-type">
+                                <span class="provider-badge ${providerClass}">${account.type}</span>
+                                <span class="status-badge ${statusClass}">
+                                    <span class="status-dot"></span>
+                                    ${statusText}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="account-actions">
+                            ${tierName ? `<span class="tier-badge ${tierClass}">${tierName}</span>` : '<span class="tier-badge tier-unknown">-</span>'}
+                            <button class="delete-btn" onclick="confirmDeleteAccount('${accountName}', '${account.email || account.name || '未知'}')" title="删除账户">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    ${reloginWarning}
+                    <div class="quota-section">
+                        <div class="quota-header">
+                            <h4>配额信息</h4>
+                            <button class="refresh-btn" onclick="refreshQuota('${account.id}', this)">
+                                <span class="icon">🔄</span>
+                                刷新
+                            </button>
+                        </div>
+                        <div class="quota-models" id="quota-${account.id}">
+                            ${renderQuota(account.quota)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuota(quota) {
+            if (!quota || !quota.models || quota.models.length === 0) {
+                if (quota && quota.token_status === 'refresh_failed') {
+                    return '<div class="no-quota" style="color: #f87171;">⚠️ Token 刷新失败</div>';
+                }
+                if (quota && quota.error) {
+                    return `<div class="no-quota" style="color: #f87171;">⚠️ ${quota.error}</div>`;
+                }
+                return '<div class="no-quota">点击刷新获取配额</div>';
+            }
+
+            if (quota.is_forbidden) {
+                return '<div class="no-quota" style="color: #f87171;">⚠️ 账户无权限 (403)</div>';
+            }
+
+            // 检查是否为静态模型列表（无配额信息）
+            const isStaticList = quota.static_list === true;
+
+            let headerHtml = '';
+            if (quota.token_status === 'refreshed') {
+                headerHtml = '<span class="token-status token-refreshed">🔄 Token 已刷新</span>';
+            }
+            if (isStaticList && quota.note) {
+                headerHtml += `<div class="no-quota" style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem;">📋 ${quota.note}</div>`;
+            }
+
+            const modelsHtml = quota.models.map(model => {
+                // 对于静态列表，显示实际的 model name（可用于 API 请求）
+                const modelName = model.name || '';
+                const displayName = model.display_name || modelName;
+                const shortName = displayName.replace('models/', '').split('/').pop();
+                
+                // 静态列表：显示模型名称和复制按钮
+                if (isStaticList || model.percentage === null || model.percentage === undefined) {
+                    const description = model.description || '';
+                    return `
+                        <div class="quota-model" style="padding: 0.3rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <code class="model-name-code" style="font-family: monospace; font-size: 0.75rem; background: var(--bg-tertiary); padding: 0.15rem 0.4rem; border-radius: 3px; flex-shrink: 0;">${modelName}</code>
+                            <button class="copy-btn" onclick="copyToClipboard('${modelName}', this)" title="复制模型名称" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; cursor: pointer; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);">📋</button>
+                            <span style="font-size: 0.65rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;" title="${description}">${description}</span>
+                        </div>
+                    `;
+                }
+                
+                // 实时配额：显示配额条和百分比
+                const level = model.percentage >= 70 ? 'high' : model.percentage >= 30 ? 'medium' : 'low';
+                const resetInfo = formatTimeRemaining(model.reset_time);
+                
+                const resetHtml = resetInfo 
+                    ? `<span class="reset-time ${resetInfo.class}" title="重置时间: ${new Date(model.reset_time).toLocaleString()}">⏱️ ${resetInfo.text}</span>`
+                    : `<span class="reset-time long">-</span>`;
+                
+                return `
+                    <div class="quota-model">
+                        <span class="model-name" title="${modelName}">${shortName}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${modelName}', this)" title="复制模型名称" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; cursor: pointer; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);">📋</button>
+                        ${resetHtml}
+                        <div class="quota-bar-container">
+                            <div class="quota-bar ${level}" style="width: ${model.percentage}%"></div>
+                        </div>
+                        <span class="quota-value ${level}">${model.percentage}%</span>
+                    </div>
+                `;
+            }).join('');
+
+            return headerHtml + modelsHtml;
+        }
+
+        function getTierClass(tier) {
+            if (!tier) return 'tier-unknown';
+            const t = tier.toLowerCase();
+            if (t.includes('ultra')) return 'tier-ultra';
+            if (t.includes('pro')) return 'tier-pro';
+            return 'tier-free';
+        }
+
+        function getTierName(tier) {
+            if (!tier) return '';
+            const t = tier.toLowerCase();
+            if (t.includes('ultra')) return 'ULTRA';
+            if (t.includes('pro')) return 'PRO';
+            return tier.toUpperCase();
+        }
+
+        async function refreshQuota(accountId, btn) {
+            const card = document.getElementById(`card-${accountId}`);
+            if (btn) btn.classList.add('loading');
+            if (card) card.classList.add('refreshing');
+
+            try {
+                const resp = await fetch(`/api/accounts/${accountId}/quota`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    updateAccountUI(accountId, data);
+                } else {
+                    console.error('刷新失败:', data.error);
+                }
+            } catch (error) {
+                console.error('刷新配额失败:', error);
+            } finally {
+                if (btn) btn.classList.remove('loading');
+                if (card) {
+                    card.classList.remove('refreshing');
+                    card.classList.add('refreshed');
+                    setTimeout(() => card.classList.remove('refreshed'), 500);
+                }
+            }
+        }
+
+        function updateAccountUI(accountId, data) {
+            const account = accounts.find(a => a.id === accountId);
+            if (account) {
+                account.quota = data.quota;
+                account.subscription_tier = data.subscription_tier;
+                // 根据刷新结果更新 needs_relogin 状态（含 invalid=Codex Models API 401）
+                const tokenStatus = (data.quota && data.quota.token_status) || '';
+                account.needs_relogin = ['missing', 'refresh_failed', 'error', 'expired', 'invalid'].includes(tokenStatus);
+            }
+
+            const quotaEl = document.getElementById(`quota-${accountId}`);
+            if (quotaEl) {
+                quotaEl.innerHTML = renderQuota(data.quota);
+            }
+
+            const card = document.querySelector(`.account-card[data-id="${accountId}"]`);
+            if (card) {
+                // 更新 needs_relogin 样式
+                const needsRelogin = account && checkNeedsRelogin(account);
+                if (needsRelogin) {
+                    card.classList.add('needs-relogin');
+                    // 添加警告提示（如果不存在）
+                    if (!card.querySelector('.relogin-warning')) {
+                        const warning = document.createElement('div');
+                        warning.className = 'relogin-warning';
+                        warning.innerHTML = '<span>⚠️</span><span>登录信息已失效，请重新登录以继续使用</span>';
+                        const header = card.querySelector('.account-header');
+                        if (header && header.nextSibling) {
+                            card.insertBefore(warning, header.nextSibling);
+                        }
+                    }
+                    // 更新状态徽章
+                    const statusBadge = card.querySelector('.status-badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge status-error';
+                        const textSpan = statusBadge.childNodes[statusBadge.childNodes.length - 1];
+                        if (textSpan && textSpan.nodeType === Node.TEXT_NODE) {
+                            textSpan.textContent = '需要重新登录';
+                        } else {
+                            // 更新最后一个文本内容
+                            statusBadge.innerHTML = '<span class="status-dot"></span>需要重新登录';
+                        }
+                    }
+                } else {
+                    card.classList.remove('needs-relogin');
+                    // 移除警告提示
+                    const warning = card.querySelector('.relogin-warning');
+                    if (warning) warning.remove();
+                    // 恢复状态徽章
+                    const statusBadge = card.querySelector('.status-badge');
+                    if (statusBadge) {
+                        statusBadge.className = 'status-badge status-active';
+                        statusBadge.innerHTML = '<span class="status-dot"></span>活跃';
+                    }
+                }
+
+                // 更新会员等级徽章
+                if (data.subscription_tier) {
+                    const tierClass = getTierClass(data.subscription_tier);
+                    const tierName = getTierName(data.subscription_tier);
+                    const header = card.querySelector('.account-header');
+                    let tierBadge = header.querySelector('.tier-badge');
+                    
+                    if (!tierBadge && tierName) {
+                        tierBadge = document.createElement('span');
+                        header.appendChild(tierBadge);
+                    }
+                    if (tierBadge) {
+                        tierBadge.className = `tier-badge ${tierClass}`;
+                        tierBadge.textContent = tierName || '-';
+                    }
+                }
+            }
+
+            updateStats();
+        }
+
+        async function parallelLimit(tasks, limit) {
+            const results = [];
+            const executing = [];
+            
+            for (const task of tasks) {
+                const p = Promise.resolve().then(() => task());
+                results.push(p);
+                
+                if (limit <= tasks.length) {
+                    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+                    executing.push(e);
+                    if (executing.length >= limit) {
+                        await Promise.race(executing);
+                    }
+                }
+            }
+            
+            return Promise.all(results);
+        }
+
+        async function refreshAllQuotas() {
+            const btn = document.getElementById('refreshAllBtn');
+            const progressInfo = document.getElementById('progressInfo');
+            btn.disabled = true;
+            
+            // 支持配额查询和 token 验证的账户类型
+            const supportedTypes = ['antigravity', 'gemini', 'codex', 'claude', 'qwen', 'iflow', 'aistudio', 'vertex'];
+            const supportedAccounts = accounts.filter(a => supportedTypes.includes(a.type));
+            const total = supportedAccounts.length;
+            let completed = 0;
+            let success = 0;
+            let failed = 0;
+
+            progressInfo.textContent = `0 / ${total}`;
+            progressInfo.classList.add('active');
+
+            const tasks = supportedAccounts.map(account => async () => {
+                const card = document.getElementById(`card-${account.id}`);
+                if (card) card.classList.add('refreshing');
+
+                try {
+                    const resp = await fetch(`/api/accounts/${account.id}/quota`, { method: 'POST' });
+                    const data = await resp.json();
+
+                    if (resp.ok) {
+                        updateAccountUI(account.id, data);
+                        // 根据刷新结果更新 needs_relogin 状态（含 invalid）
+                        const tokenStatus = (data.quota && data.quota.token_status) || '';
+                        account.needs_relogin = ['missing', 'refresh_failed', 'error', 'expired', 'invalid'].includes(tokenStatus);
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    console.error(`刷新 ${account.id} 失败:`, error);
+                    failed++;
+                } finally {
+                    completed++;
+                    progressInfo.textContent = `${completed} / ${total}`;
+                    
+                    if (card) {
+                        card.classList.remove('refreshing');
+                        card.classList.add('refreshed');
+                        setTimeout(() => card.classList.remove('refreshed'), 500);
+                    }
+                }
+            });
+
+            await parallelLimit(tasks, CONCURRENCY);
+
+            btn.disabled = false;
+            progressInfo.classList.remove('active');
+            
+            const skipped = accounts.length - total;
+            let message = `刷新完成: ${success} 成功`;
+            if (failed > 0) message += `, ${failed} 失败`;
+            if (skipped > 0) message += `, ${skipped} 跳过`;
+            
+            showToast(message, failed > 0 ? 'error' : 'success');
+            progressInfo.textContent = '';
+            
+            // 刷新后更新统计和重新渲染，以显示需要重新登录的账户
+            updateStats();
+            renderAccounts();
+        }
+
+        // ==================== Utilities ====================
+        function formatTimeRemaining(dateStr) {
+            if (!dateStr) return null;
+            
+            const targetDate = new Date(dateStr);
+            const now = new Date();
+            const diffMs = targetDate.getTime() - now.getTime();
+            
+            if (diffMs <= 0) return { text: '0h 0m', class: 'soon' };
+            
+            const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            let text;
+            if (diffHrs >= 24) {
+                const diffDays = Math.floor(diffHrs / 24);
+                const remainingHrs = diffHrs % 24;
+                text = `${diffDays}d ${remainingHrs}h`;
+            } else {
+                text = `${diffHrs}h ${diffMins}m`;
+            }
+            
+            // 颜色等级
+            let colorClass;
+            if (diffHrs < 1) {
+                colorClass = 'soon';      // 绿色 - 快重置了
+            } else if (diffHrs < 6) {
+                colorClass = 'waiting';   // 琥珀色 - 等待中
+            } else {
+                colorClass = 'long';      // 灰色 - 长等待
+            }
+            
+            return { text, class: colorClass };
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderAccounts();
+            });
+        });
+
+        // ==================== Usage Guide ====================
+        let usageGuideData = null;
+
+        async function loadUsageGuide() {
+            try {
+                const resp = await fetch('/api/usage-guide');
+                const data = await resp.json();
+                usageGuideData = data;
+                renderUsageGuide(data);
+            } catch (error) {
+                console.error('加载使用说明失败:', error);
+                showToast('加载使用说明失败', 'error');
+            }
+        }
+
+        function renderUsageGuide(data) {
+            // Connection info
+            document.getElementById('baseUrl').textContent = data.base_url;
+            document.getElementById('apiKey').textContent = data.api_key;
+            document.getElementById('apiKeysCount').textContent = `${data.api_keys_count} 个`;
+
+            // All keys
+            if (data.all_api_keys && data.all_api_keys.length > 0) {
+                document.getElementById('allKeysSection').style.display = 'block';
+                const keysList = document.getElementById('allKeysList');
+                keysList.innerHTML = data.all_api_keys.map(key => `
+                    <div class="key-item">
+                        <code>${key}</code>
+                        <button class="copy-btn" onclick="copyToClipboard('${key}')">📋</button>
+                    </div>
+                `).join('');
+            }
+
+            // Code examples
+            document.getElementById('curlExample').textContent = data.examples.curl;
+            document.getElementById('curlStreamExample').textContent = data.examples.curl_stream;
+            document.getElementById('pythonRequestsExample').textContent = data.examples.python_requests;
+            document.getElementById('pythonOpenaiExample').textContent = data.examples.python_openai;
+            document.getElementById('pythonStreamExample').textContent = data.examples.python_stream;
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板', 'success');
+                // 如果提供了按钮，显示复制成功反馈
+                if (btn) {
+                    const originalText = btn.textContent;
+                    btn.textContent = '✓';
+                    btn.style.color = '#22c55e';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.color = '';
+                    }, 1000);
+                }
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showToast('复制失败', 'error');
+            });
+        }
+
+        // ==================== Account Management ====================
+        let currentAuthState = null;
+        let authStatusInterval = null;
+        let pendingDeleteAccount = null;
+        let isInteractiveSession = false;
+
+        function showAddAccountModal() {
+            document.getElementById('addAccountModal').style.display = 'flex';
+            // Reset state
+            document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('authUrlSection').classList.remove('active');
+            document.getElementById('authStatus').style.display = 'none';
+            document.getElementById('cliOutputSection').style.display = 'none';
+            document.getElementById('userInputSection').style.display = 'none';
+            document.getElementById('cliOutputContainer').textContent = '等待输出...';
+            document.getElementById('userInputField').value = '';
+            currentAuthState = null;
+            isInteractiveSession = false;
+            if (authStatusInterval) {
+                clearInterval(authStatusInterval);
+                authStatusInterval = null;
+            }
+        }
+
+        function closeAddAccountModal() {
+            document.getElementById('addAccountModal').style.display = 'none';
+            // Cancel the auth session if active
+            if (currentAuthState) {
+                fetch('/api/accounts/auth/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state: currentAuthState })
+                }).catch(() => {});
+            }
+            // Clear polling
+            if (authStatusInterval) {
+                clearInterval(authStatusInterval);
+                authStatusInterval = null;
+            }
+            currentAuthState = null;
+            isInteractiveSession = false;
+        }
+
+        async function selectProvider(provider) {
+            // Update UI
+            document.querySelectorAll('.provider-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.provider === provider);
+            });
+
+            const authUrlSection = document.getElementById('authUrlSection');
+            const authUrlInput = document.getElementById('authUrlInput');
+            const authStatus = document.getElementById('authStatus');
+            const authStatusText = document.getElementById('authStatusText');
+            const authHint = document.getElementById('authHint');
+            const authHintText = document.getElementById('authHintText');
+            const cliOutputSection = document.getElementById('cliOutputSection');
+            const userInputSection = document.getElementById('userInputSection');
+
+            authUrlInput.textContent = '正在启动认证流程...';
+            authUrlSection.classList.add('active');
+            authStatus.style.display = 'none';
+            authHint.style.display = 'none';
+            cliOutputSection.style.display = 'none';
+            userInputSection.style.display = 'none';
+
+            // Clear previous polling
+            if (authStatusInterval) {
+                clearInterval(authStatusInterval);
+                authStatusInterval = null;
+            }
+
+            try {
+                const resp = await fetch(`/api/accounts/auth/${provider}`, { method: 'POST' });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    currentAuthState = data.state;
+                    isInteractiveSession = data.interactive === true;
+                    
+                    // Show URL if available
+                    if (data.url) {
+                        authUrlInput.textContent = data.url;
+                    } else {
+                        authUrlInput.textContent = '等待认证 URL...';
+                    }
+
+                    // Show hint for remote server
+                    if (data.callback_port && data.callback_port > 0) {
+                        authHint.style.display = 'block';
+                        authHintText.innerHTML = `如果是远程服务器，请先设置 SSH 端口转发:<br><code style="background: var(--bg-input); padding: 2px 6px; border-radius: 4px; font-family: monospace;">ssh -L ${data.callback_port}:localhost:${data.callback_port} user@server</code>`;
+                    }
+
+                    // Show CLI output section for interactive sessions
+                    if (isInteractiveSession) {
+                        cliOutputSection.style.display = 'block';
+                        if (data.output) {
+                            document.getElementById('cliOutputContainer').textContent = data.output;
+                        }
+                        
+                        // Show input section if needed
+                        if (data.needs_input) {
+                            showUserInputSection(data.input_prompt || '需要输入信息');
+                        }
+                    }
+
+                    // Show waiting status
+                    authStatus.className = 'auth-status waiting';
+                    authStatus.style.display = 'flex';
+                    authStatusText.textContent = '等待认证完成... 请在浏览器中完成认证';
+
+                    // Start polling for status
+                    startAuthStatusPolling(data.state);
+                } else {
+                    authUrlInput.textContent = data.error || '获取认证链接失败';
+                    authStatus.className = 'auth-status error';
+                    authStatus.style.display = 'flex';
+                    authStatusText.textContent = data.error || '获取认证链接失败';
+                    
+                    // Show output if available
+                    if (data.output) {
+                        cliOutputSection.style.display = 'block';
+                        document.getElementById('cliOutputContainer').textContent = data.output;
+                    }
+                }
+            } catch (error) {
+                authUrlInput.textContent = '请求失败: ' + error.message;
+                authStatus.className = 'auth-status error';
+                authStatus.style.display = 'flex';
+                authStatusText.textContent = '请求失败: ' + error.message;
+            }
+        }
+
+        function showUserInputSection(prompt) {
+            const section = document.getElementById('userInputSection');
+            const promptDetail = document.getElementById('userInputPromptDetail');
+            const hintText = document.getElementById('userInputHintText');
+            const inputField = document.getElementById('userInputField');
+            const sendBtn = document.getElementById('sendInputBtn');
+            const label = document.getElementById('userInputLabel');
+            
+            section.style.display = 'block';
+            
+            // 确保输入框是可用的状态
+            inputField.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            label.innerHTML = '<span>⌨️</span><span>需要您输入信息</span>';
+            
+            // 根据提示类型显示不同的详细说明
+            const promptLower = (prompt || '').toLowerCase();
+            
+            if (promptLower.includes('callback') || promptLower.includes('paste')) {
+                promptDetail.innerHTML = '🔗 <strong>请粘贴回调 URL</strong>：在浏览器中完成登录后，复制地址栏中的完整 URL 粘贴到下方';
+                hintText.textContent = '回调 URL 格式类似: http://localhost:51121/oauth-callback?code=...&state=...';
+                inputField.placeholder = '粘贴完整的回调 URL';
+            } else if (promptLower.includes('project') || promptLower.includes('choice') || promptLower.includes('[1]') || promptLower.includes('[2]')) {
+                promptDetail.innerHTML = '📋 <strong>请选择项目</strong>：查看上方输出中的项目列表，输入项目 ID 或编号';
+                hintText.innerHTML = '输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 可以激活所有项目，或输入具体的项目编号/ID';
+                inputField.placeholder = '输入 ALL 或项目编号';
+            } else if (promptLower.includes('all') || promptLower.includes('project')) {
+                promptDetail.innerHTML = '📋 <strong>请选择项目</strong>：输入项目 ID、编号或 ALL';
+                hintText.innerHTML = '输入 <code style="background: var(--bg-input); padding: 0.1rem 0.3rem; border-radius: 3px;">ALL</code> 激活所有项目，或输入项目编号。直接发送空内容选择默认项目';
+                inputField.placeholder = '输入 ALL / 项目编号 / 或留空选默认';
+            } else if (promptLower.includes('enter') || promptLower.includes('[1]') || promptLower.includes('[2]')) {
+                promptDetail.innerHTML = '⏎ <strong>请按提示输入</strong>：查看上方命令行输出了解需要输入的内容';
+                hintText.textContent = '输入选项编号。直接发送空内容相当于按 Enter（选择默认选项）';
+                inputField.placeholder = '输入选项或留空选默认';
+            } else {
+                promptDetail.innerHTML = '📝 <strong>请输入信息</strong>：' + (prompt || '查看上方命令行输出了解需要输入的内容');
+                hintText.textContent = '请根据命令行提示输入相应内容';
+                inputField.placeholder = '输入后按 Enter 或点击发送';
+            }
+            
+            inputField.focus();
+        }
+
+        function hideUserInputSection() {
+            document.getElementById('userInputSection').style.display = 'none';
+            document.getElementById('userInputField').value = '';
+            window.inputPendingResponse = false;  // 重置等待状态
+        }
+
+        // 显示输入已发送、等待处理的状态
+        function showInputPendingState() {
+            const section = document.getElementById('userInputSection');
+            const promptDetail = document.getElementById('userInputPromptDetail');
+            const inputField = document.getElementById('userInputField');
+            const sendBtn = document.getElementById('sendInputBtn');
+            const hintText = document.getElementById('userInputHintText');
+            const label = document.getElementById('userInputLabel');
+            
+            section.style.display = 'block';
+            label.innerHTML = '<span>⏳</span><span>已发送，等待处理中...</span>';
+            promptDetail.innerHTML = '✅ <strong>输入已成功发送</strong>，正在等待命令行处理，请稍候...';
+            hintText.textContent = '如果需要再次输入，输入框会自动解锁';
+            inputField.disabled = true;
+            inputField.placeholder = '等待处理中...';
+            inputField.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = '等待中';
+            
+            window.inputPendingResponse = true;  // 标记为等待响应状态
+        }
+
+        // 解锁输入框（当确实需要新的输入时）
+        function unlockInputSection() {
+            const inputField = document.getElementById('userInputField');
+            const sendBtn = document.getElementById('sendInputBtn');
+            const label = document.getElementById('userInputLabel');
+            
+            inputField.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+            label.innerHTML = '<span>⌨️</span><span>需要您输入信息</span>';
+            
+            window.inputPendingResponse = false;
+        }
+
+        async function sendUserInput() {
+            if (!currentAuthState) {
+                showToast('没有活动的认证会话', 'error');
+                return;
+            }
+
+            const inputField = document.getElementById('userInputField');
+            // 不 trim，允许空字符串（相当于按回车）
+            const userInput = inputField.value;
+
+            const sendBtn = document.getElementById('sendInputBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '发送中...';
+
+            try {
+                const resp = await fetch('/api/accounts/auth/input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        state: currentAuthState,
+                        input: userInput
+                    })
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    // 显示等待状态而不是隐藏输入框
+                    showInputPendingState();
+                    showToast('输入已发送，等待处理...', 'success');
+                    
+                    // Immediately refresh output
+                    refreshCliOutput();
+                } else {
+                    showToast(data.error || '发送失败', 'error');
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '发送';
+                }
+            } catch (error) {
+                showToast('发送失败: ' + error.message, 'error');
+                sendBtn.disabled = false;
+                sendBtn.textContent = '发送';
+            }
+        }
+
+        async function refreshCliOutput() {
+            if (!currentAuthState) return;
+
+            try {
+                const resp = await fetch(`/api/accounts/auth/output?state=${currentAuthState}`);
+                const data = await resp.json();
+
+                if (resp.ok && data.output) {
+                    const container = document.getElementById('cliOutputContainer');
+                    container.textContent = data.output;
+                    // Auto scroll to bottom
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Refresh output error:', error);
+            }
+        }
+
+        function startAuthStatusPolling(state) {
+            let attempts = 0;
+            const maxAttempts = 600; // 10 minutes at 1s intervals (longer for interactive sessions)
+
+            authStatusInterval = setInterval(async () => {
+                attempts++;
+                
+                if (attempts > maxAttempts) {
+                    clearInterval(authStatusInterval);
+                    authStatusInterval = null;
+                    
+                    const authStatus = document.getElementById('authStatus');
+                    const authStatusText = document.getElementById('authStatusText');
+                    authStatus.className = 'auth-status error';
+                    authStatusText.textContent = '认证超时，请重试';
+                    return;
+                }
+
+                try {
+                    const resp = await fetch(`/api/accounts/auth/status?state=${state}`);
+                    const data = await resp.json();
+
+                    const authStatus = document.getElementById('authStatus');
+                    const authStatusText = document.getElementById('authStatusText');
+                    const authUrlInput = document.getElementById('authUrlInput');
+
+                    // Update URL if available
+                    if (data.url && authUrlInput.textContent === '等待认证 URL...') {
+                        authUrlInput.textContent = data.url;
+                    }
+
+                    // Update CLI output if available
+                    if (data.output && isInteractiveSession) {
+                        const container = document.getElementById('cliOutputContainer');
+                        container.textContent = data.output;
+                        container.scrollTop = container.scrollHeight;
+                    }
+
+                    if (data.status === 'ok') {
+                        // Auth completed successfully
+                        clearInterval(authStatusInterval);
+                        authStatusInterval = null;
+                        
+                        authStatus.className = 'auth-status success';
+                        authStatusText.textContent = '✓ 认证成功！账户已添加';
+                        hideUserInputSection();
+                        
+                        showToast('账户添加成功', 'success');
+                        
+                        // Refresh accounts list after a short delay
+                        setTimeout(() => {
+                            loadAccounts();
+                            closeAddAccountModal();
+                        }, 1500);
+                    } else if (data.status === 'error') {
+                        // Auth failed
+                        clearInterval(authStatusInterval);
+                        authStatusInterval = null;
+                        
+                        authStatus.className = 'auth-status error';
+                        authStatusText.textContent = data.error || '认证失败';
+                        hideUserInputSection();
+                    } else if (data.status === 'needs_input' || data.needs_input) {
+                        // Needs user input
+                        authStatus.className = 'auth-status waiting';
+                        
+                        // 如果正在等待处理响应，检查是否是新的输入提示
+                        if (window.inputPendingResponse) {
+                            // 检查是否有新的不同的输入提示
+                            const currentPrompt = data.input_prompt || '';
+                            const lastPrompt = window.lastInputPrompt || '';
+                            
+                            // 如果提示相同，保持等待状态
+                            if (currentPrompt === lastPrompt || currentPrompt.toLowerCase().includes(lastPrompt.toLowerCase()) || lastPrompt.toLowerCase().includes(currentPrompt.toLowerCase())) {
+                                authStatusText.textContent = '⏳ 输入已发送，等待处理中...';
+                                // 保持等待状态，不解锁输入框
+                            } else {
+                                // 新的输入提示，解锁输入框
+                                authStatusText.textContent = '⌨️ 需要输入信息，请查看下方输入框';
+                                window.lastInputPrompt = currentPrompt;
+                                unlockInputSection();
+                                showUserInputSection(currentPrompt || '请输入信息');
+                            }
+                        } else {
+                            // 不在等待状态，正常显示输入框
+                            authStatusText.textContent = '⌨️ 需要输入信息，请查看下方输入框';
+                            window.lastInputPrompt = data.input_prompt || '';
+                            showUserInputSection(data.input_prompt || '请输入信息');
+                        }
+                    } else {
+                        // Still waiting
+                        authStatus.className = 'auth-status waiting';
+                        if (data.detail === 'waiting_callback') {
+                            authStatusText.textContent = '等待认证回调... 请在浏览器中完成认证';
+                        } else if (data.detail === 'running') {
+                            authStatusText.textContent = '认证流程进行中...';
+                        } else {
+                            authStatusText.textContent = '等待认证完成...';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Status polling error:', error);
+                }
+            }, 1000);
+        }
+
+        function copyAuthUrl() {
+            const authUrl = document.getElementById('authUrlInput').textContent;
+            if (!authUrl || authUrl === '-' || authUrl.startsWith('正在') || authUrl.startsWith('请求失败') || authUrl.startsWith('等待')) {
+                showToast('没有可复制的链接', 'error');
+                return;
+            }
+
+            navigator.clipboard.writeText(authUrl).then(() => {
+                const btn = document.getElementById('authUrlCopyBtn');
+                btn.textContent = '✓ 已复制';
+                btn.classList.add('copied');
+                showToast('认证链接已复制到剪贴板', 'success');
+                
+                setTimeout(() => {
+                    btn.textContent = '📋 复制';
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                showToast('复制失败: ' + err.message, 'error');
+            });
+        }
+
+        function confirmDeleteAccount(accountName, displayName) {
+            pendingDeleteAccount = accountName;
+            document.getElementById('deleteAccountName').textContent = displayName || accountName;
+            document.getElementById('deleteConfirmModal').style.display = 'flex';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+            pendingDeleteAccount = null;
+        }
+
+        async function executeDeleteAccount() {
+            if (!pendingDeleteAccount) return;
+
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 删除中...';
+
+            try {
+                const resp = await fetch(`/api/accounts/${encodeURIComponent(pendingDeleteAccount)}`, {
+                    method: 'DELETE'
+                });
+                const data = await resp.json();
+
+                if (resp.ok && data.success) {
+                    showToast('账户已删除', 'success');
+                    closeDeleteModal();
+                    loadAccounts(); // Refresh list
+                } else {
+                    showToast(data.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🗑️</span> 确认删除';
+            }
+        }
+
+        function showBulkDeleteReloginConfirm() {
+            const list = getFilteredAccounts().filter(a => checkNeedsRelogin(a));
+            if (list.length === 0) {
+                showToast('当前列表中没有需要重新登录的账户', 'error');
+                return;
+            }
+            document.getElementById('bulkDeleteReloginModalCount').textContent = list.length;
+            document.getElementById('bulkDeleteReloginModal').style.display = 'flex';
+        }
+
+        function closeBulkDeleteReloginModal() {
+            document.getElementById('bulkDeleteReloginModal').style.display = 'none';
+        }
+
+        async function executeBulkDeleteRelogin() {
+            const list = getFilteredAccounts().filter(a => checkNeedsRelogin(a));
+            if (list.length === 0) {
+                closeBulkDeleteReloginModal();
+                return;
+            }
+            const btn = document.getElementById('confirmBulkDeleteReloginBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳</span> 删除中...';
+            let done = 0;
+            let failed = 0;
+            try {
+                for (const account of list) {
+                    const name = account.name || account.id;
+                    try {
+                        const resp = await fetch(`/api/accounts/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                        const data = await resp.json();
+                        if (resp.ok && data.success) done++;
+                        else failed++;
+                    } catch (_) {
+                        failed++;
+                    }
+                }
+                showToast(`批量删除完成: ${done} 成功${failed > 0 ? ', ' + failed + ' 失败' : ''}`, failed > 0 ? 'error' : 'success');
+                closeBulkDeleteReloginModal();
+                loadAccounts();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🗑️</span> 确定删除';
+            }
+        }
+
+        // Close modals on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAddAccountModal();
+                closeDeleteModal();
+                closeBulkDeleteReloginModal();
+            }
+        });
+
+        // Close modals on overlay click
+        document.getElementById('addAccountModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeAddAccountModal();
+            }
+        });
+
+        document.getElementById('deleteConfirmModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeDeleteModal();
+            }
+        });
+
+        document.getElementById('bulkDeleteReloginModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeBulkDeleteReloginModal();
+            }
+        });
+
+        // ==================== Initial Load ====================
+        refreshStatus();
+        refreshLogs();
+    </script>
+</body>
+</html>
