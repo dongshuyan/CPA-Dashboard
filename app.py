@@ -688,6 +688,9 @@ class InteractiveOAuthSession:
             # Codex / Claude 等
             "Enter choice",
             "Enter your choice",
+            # Qwen 补充
+            "email address",
+            "alias for qwen",
             # 通用
             "Please paste",
             "paste the URL",
