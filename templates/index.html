@@ -1384,7 +1384,87 @@
                 height: 300px;
             }
         }
-    </style>
+    
+/* ==== codex-quota v4 rows ==== */
+.quota-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.4rem 0.75rem;
+    font-size: 0.72rem;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 3px 3px 0 0;
+    transition: color 0.15s, background 0.15s;
+}
+.tab-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+.tab-btn.active {
+    color: var(--accent-cyan);
+    border-bottom: 2px solid var(--accent-cyan);
+    font-weight: 500;
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.quota-row-v4 {
+    padding: 0.45rem 0;
+}
+.quota-row-v4 + .quota-row-v4 {
+    border-top: 1px solid var(--border-color);
+}
+.quota-row-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.4rem;
+    gap: 0.75rem;
+}
+.quota-row-name {
+    font-weight: 500;
+    font-size: 0.72rem;
+    color: var(--text-primary);
+}
+.quota-row-right {
+    display: inline-flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    white-space: nowrap;
+}
+.quota-row-right .quota-value {
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+.quota-row-right .quota-reset {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+}
+.quota-bar-fullwidth {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-tertiary, rgba(255,255,255,0.05));
+    border-radius: 999px;
+    overflow: hidden;
+}
+.quota-bar-fullwidth .quota-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.35s ease-out;
+}
+.quota-section-header {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 0.25rem 0 0.45rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.05em;
+}
+
+        </style>
 </head>
 <body>
     <div class="container">
@@ -2316,14 +2396,71 @@
                 headerHtml += `<div class="no-quota" style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.5rem;">📋 ${quota.note}</div>`;
             }
 
-            const modelsHtml = quota.models.map(model => {
-                // 对于静态列表，显示实际的 model name（可用于 API 请求）
-                const modelName = model.name || '';
-                const displayName = model.display_name || modelName;
-                const shortName = displayName.replace('models/', '').split('/').pop();
-                
-                // 静态列表：显示模型名称和复制按钮
-                if (isStaticList || model.percentage === null || model.percentage === undefined) {
+            const modelsHtml = (() => {
+                /* codex-quota v4 render (codex-scoped — antigravity keeps legacy rendering) */
+                const isCodexEntry = (m) => !!m.window_type;
+                const staticLikeModels = quota.models.filter(m => m.percentage === null || m.percentage === undefined);
+                const quotaLikeModels  = quota.models.filter(m => m.percentage !== null && m.percentage !== undefined);
+                const codexEntries       = quotaLikeModels.filter(isCodexEntry);
+                const legacyQuotaEntries = quotaLikeModels.filter(m => !isCodexEntry(m));
+
+                // Original antigravity one-row style — byte-equivalent to pre-PR rendering
+                const renderQuotaLegacy = (model) => {
+                    const modelName = model.name || '';
+                    const displayName = model.display_name || modelName;
+                    const shortName = displayName.replace('models/', '').split('/').pop();
+                    const level = model.percentage >= 70 ? 'high' : model.percentage >= 30 ? 'medium' : 'low';
+                    const resetInfo = formatTimeRemaining(model.reset_time);
+                    const resetHtml = resetInfo
+                        ? `<span class="reset-time ${resetInfo.class}" title="重置时间: ${new Date(model.reset_time).toLocaleString()}">⏱️ ${resetInfo.text}</span>`
+                        : `<span class="reset-time long">-</span>`;
+                    return `
+                        <div class="quota-model">
+                            <span class="model-name" title="${modelName}">${shortName}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${modelName}', this)" title="复制模型名称" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; cursor: pointer; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);">📋</button>
+                            ${resetHtml}
+                            <div class="quota-bar-container">
+                                <div class="quota-bar ${level}" style="width: ${model.percentage}%"></div>
+                            </div>
+                            <span class="quota-value ${level}">${model.percentage}%</span>
+                        </div>
+                    `;
+                };
+
+                // Codex two-row style: name + used% + reset countdown, full-width usage bar below
+                const renderQuotaCodex = (model) => {
+                    const modelName = model.name || '';
+                    const displayName = model.display_name || modelName;
+                    const shortName = displayName.replace('models/', '').split('/').pop();
+                    const remainingPct = model.percentage;
+                    const usedPct = (typeof model.used_percent === 'number')
+                        ? model.used_percent
+                        : Math.max(0, 100 - remainingPct);
+                    const level = remainingPct >= 70 ? 'high' : remainingPct >= 30 ? 'medium' : 'low';
+                    const resetInfo = formatTimeRemaining(model.reset_time);
+                    const resetText = resetInfo ? resetInfo.text : '';
+                    const resetTitle = resetInfo
+                        ? ('重置时间: ' + new Date(model.reset_time).toLocaleString())
+                        : '';
+                    return `
+                        <div class="quota-row-v4">
+                            <div class="quota-row-meta">
+                                <span class="quota-row-name" title="${modelName}">${shortName}</span>
+                                <span class="quota-row-right">
+                                    <span class="quota-value ${level}">${usedPct}%</span>
+                                    <span class="quota-reset" title="${resetTitle}">${resetText}</span>
+                                </span>
+                            </div>
+                            <div class="quota-bar-fullwidth">
+                                <div class="quota-bar ${level}" style="width: ${usedPct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                // Static (just a model catalog — no quota) — unchanged from before
+                const renderStatic = (model) => {
+                    const modelName = model.name || '';
                     const description = model.description || '';
                     return `
                         <div class="quota-model" style="padding: 0.3rem 0; display: flex; align-items: center; gap: 0.5rem;">
@@ -2332,28 +2469,41 @@
                             <span style="font-size: 0.65rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;" title="${description}">${description}</span>
                         </div>
                     `;
-                }
-                
-                // 实时配额：显示配额条和百分比
-                const level = model.percentage >= 70 ? 'high' : model.percentage >= 30 ? 'medium' : 'low';
-                const resetInfo = formatTimeRemaining(model.reset_time);
-                
-                const resetHtml = resetInfo 
-                    ? `<span class="reset-time ${resetInfo.class}" title="重置时间: ${new Date(model.reset_time).toLocaleString()}">⏱️ ${resetInfo.text}</span>`
-                    : `<span class="reset-time long">-</span>`;
-                
-                return `
-                    <div class="quota-model">
-                        <span class="model-name" title="${modelName}">${shortName}</span>
-                        <button class="copy-btn" onclick="copyToClipboard('${modelName}', this)" title="复制模型名称" style="padding: 0.1rem 0.3rem; font-size: 0.65rem; cursor: pointer; border: 1px solid var(--border-color); border-radius: 3px; background: var(--bg-secondary); color: var(--text-secondary);">📋</button>
-                        ${resetHtml}
-                        <div class="quota-bar-container">
-                            <div class="quota-bar ${level}" style="width: ${model.percentage}%"></div>
+                };
+
+                const hasCodex  = codexEntries.length > 0;
+                const hasLegacy = legacyQuotaEntries.length > 0;
+                const hasStatic = staticLikeModels.length > 0;
+
+                const codexBody  = codexEntries.map(renderQuotaCodex).join('');
+                const legacyBody = legacyQuotaEntries.map(renderQuotaLegacy).join('');
+                const staticBody = staticLikeModels.map(renderStatic).join('');
+                const sectionHeader = '<div class="quota-section-header">使用量</div>';
+
+                // Case A: codex live usage + static model catalog → Tab switcher
+                if (hasCodex && hasStatic) {
+                    return `
+                        <div class="quota-container">
+                            <div class="quota-tabs">
+                                <button class="tab-btn active" onclick="switchQuotaTab(this, 'live')">📊 实时用量 (${codexEntries.length})</button>
+                                <button class="tab-btn" onclick="switchQuotaTab(this, 'models')">📋 支持模型 (${staticLikeModels.length})</button>
+                            </div>
+                            <div class="tab-pane active" data-pane="live">${sectionHeader}${codexBody}</div>
+                            <div class="tab-pane" data-pane="models">${staticBody}</div>
                         </div>
-                        <span class="quota-value ${level}">${model.percentage}%</span>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }
+                // Case B: codex only (no static) → new section with header, no tabs
+                if (hasCodex) {
+                    return `<div class="quota-container">${sectionHeader}${codexBody}</div>`;
+                }
+                // Case C: legacy quota (antigravity/gemini) — render as before, byte-equivalent
+                if (hasLegacy) {
+                    return legacyBody;
+                }
+                // Case D: static only — render as before
+                return staticBody;
+            })();
 
             return headerHtml + modelsHtml;
         }
@@ -3201,6 +3351,18 @@
         // ==================== Initial Load ====================
         refreshStatus();
         refreshLogs();
-    </script>
+    
+/* ==== codex-quota switchQuotaTab ==== */
+function switchQuotaTab(btn, pane) {
+    const container = btn.closest('.quota-container');
+    if (!container) return;
+    container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    container.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    const target = container.querySelector('[data-pane="' + pane + '"]');
+    if (target) target.classList.add('active');
+}
+
+        </script>
 </body>
 </html>

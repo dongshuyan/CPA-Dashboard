@@ -24,7 +24,7 @@ from config import (
 # 支持配额查询的 provider 类型（可获取实时配额信息）
 # 注意：只有 Antigravity 可以使用 fetchAvailableModels API
 # Gemini CLI 使用个人 Google 账户，没有 fetchAvailableModels 权限
-SUPPORTED_QUOTA_PROVIDERS = ["antigravity"]
+SUPPORTED_QUOTA_PROVIDERS = ["antigravity", "codex"]
 
 # ==================== 各 OAuth 提供商配置 ====================
 # 用于验证 token 有效性（从 CLIProxyAPI 源码提取）
@@ -863,6 +863,10 @@ def get_quota_for_account(auth_data: dict) -> dict:
             "error": f"配额查询暂不支持 {provider} 类型账号"
         }
     
+    # codex 走独立流程（OpenAI OAuth + ChatGPT backend usage API）
+    if provider == "codex":
+        return _codex_quota_flow(auth_data)
+
     # 提取 token 信息
     access_token, refresh_token, project_id = _extract_tokens_from_auth_data(auth_data, provider)
     
@@ -917,3 +921,163 @@ def get_quota_for_account(auth_data: dict) -> dict:
         quota["token_status"] = "error"
     
     return quota
+
+
+# ==================== Codex (ChatGPT) 配额支持 ====================
+# 向 https://chatgpt.com/backend-api/wham/usage 查询 Codex 订阅实时用量。
+# 参考实现: https://github.com/nguyenphutrong/quotio  (CodexCLIQuotaFetcher.swift)
+#   - 鉴权: Authorization: Bearer <access_token> + ChatGPT-Account-Id
+#   - 返回: plan_type, rate_limit.primary_window (滚动会话窗口), rate_limit.secondary_window (周窗口)
+#   - Refresh: POST https://auth.openai.com/oauth/token, client_id=<Codex CLI>
+
+CODEX_USAGE_URL = "https://chatgpt.com/backend-api/wham/usage"
+CODEX_TOKEN_URL = "https://auth.openai.com/oauth/token"
+CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+
+
+def _codex_iso_utc(ts):
+    """Unix epoch (seconds) -> ISO-8601 UTC string, empty on invalid."""
+    if not ts:
+        return ""
+    try:
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(ts)))
+    except Exception:
+        return ""
+
+
+def _codex_headers(access_token, account_id):
+    headers = {
+        "Authorization": "Bearer " + access_token,
+        "Accept": "application/json",
+    }
+    if account_id:
+        headers["ChatGPT-Account-Id"] = account_id
+    return headers
+
+
+def _refresh_codex_token(refresh_token):
+    try:
+        resp = requests.post(
+            CODEX_TOKEN_URL,
+            json={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": CODEX_CLIENT_ID,
+            },
+            timeout=15,
+            proxies=REQUESTS_PROXIES,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("access_token")
+        print("Token 刷新失败 (codex): %s - %s" % (resp.status_code, resp.text[:200]))
+        return None
+    except Exception as e:
+        print("Token 刷新异常 (codex): %s" % e)
+        return None
+
+
+def fetch_codex_quota(access_token, account_id):
+    """Return (quota_dict, success_bool). Populates two entries:
+    codex-session (primary_window, rolling session window) and codex-weekly (secondary_window)."""
+    result = {
+        "models": [],
+        "last_updated": int(time.time()),
+        "is_forbidden": False,
+        "subscription_tier": None,
+        "limit_reached": False,
+    }
+    try:
+        resp = requests.get(
+            CODEX_USAGE_URL,
+            headers=_codex_headers(access_token, account_id),
+            timeout=15,
+            proxies=REQUESTS_PROXIES,
+        )
+        if resp.status_code == 401:
+            return result, False
+        if resp.status_code == 403:
+            result["is_forbidden"] = True
+            return result, True
+        if resp.status_code != 200:
+            print("配额 API 错误 (codex): %s - %s" % (resp.status_code, resp.text[:200]))
+            return result, False
+        data = resp.json()
+        result["subscription_tier"] = data.get("plan_type")
+        rate = data.get("rate_limit") or {}
+        limit_reached = bool(rate.get("limit_reached"))
+        result["limit_reached"] = limit_reached
+
+        for window_key, entry_name, display in (
+            ("primary_window", "codex-session", "会话窗口"),
+            ("secondary_window", "codex-weekly", "周窗口"),
+        ):
+            w = rate.get(window_key) or {}
+            if not w:
+                continue
+            used = int(w.get("used_percent", 0))
+            reset_epoch = w.get("reset_at")
+            reset_iso = _codex_iso_utc(reset_epoch)
+            dn = display + (" ⚠ 已限流" if limit_reached else "")
+            result["models"].append({
+                "name": entry_name,
+                "display_name": dn,
+                "description": "%s · 重置于 %s" % (display, reset_iso or "未知"),
+                "original_name": window_key,
+                "percentage": max(0, 100 - used),
+                "used_percent": used,
+                "reset_time": reset_iso,
+                "reset_time_epoch": reset_epoch,
+                "window_type": "session" if window_key == "primary_window" else "weekly",
+            })
+        return result, True
+    except Exception as e:
+        print("获取配额失败 (codex): %s" % e)
+        return result, False
+
+
+def _codex_quota_flow(auth_data):
+    """Merge static model catalog with real-time Codex usage windows."""
+    provider = "codex"
+    base = get_static_models_for_provider(provider, auth_data) or {
+        "models": [],
+        "last_updated": int(time.time()),
+        "is_forbidden": False,
+        "subscription_tier": None,
+    }
+    base.pop("note", None)
+    base.pop("static_list", None)
+
+    access_token = auth_data.get("access_token")
+    refresh_token = auth_data.get("refresh_token")
+    account_id = auth_data.get("account_id")
+
+    if not access_token and not refresh_token:
+        base["token_status"] = "missing"
+        base["error"] = "缺少 access_token 和 refresh_token"
+        return base
+
+    token_refreshed = False
+    quota_data, success = ({}, False)
+    if access_token:
+        quota_data, success = fetch_codex_quota(access_token, account_id)
+    if not success and refresh_token:
+        new_token = _refresh_codex_token(refresh_token)
+        if new_token:
+            quota_data, success = fetch_codex_quota(new_token, account_id)
+            if success:
+                token_refreshed = True
+
+    if success:
+        base["subscription_tier"] = quota_data.get("subscription_tier") or base.get("subscription_tier")
+        base["limit_reached"] = quota_data.get("limit_reached", False)
+        base["is_forbidden"] = quota_data.get("is_forbidden", False)
+        base["models"] = (quota_data.get("models") or []) + list(base.get("models") or [])
+        base["token_status"] = "refreshed" if token_refreshed else "valid"
+        if token_refreshed:
+            base["token_refreshed"] = True
+    else:
+        base["token_status"] = base.get("token_status") or "error"
+        base["quota_error"] = "实时配额获取失败（token 过期或网络异常），仅显示静态模型列表"
+
+    base["last_updated"] = int(time.time())
+    return base
